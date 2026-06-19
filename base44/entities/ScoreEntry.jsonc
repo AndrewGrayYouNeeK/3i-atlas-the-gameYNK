@@ -1,0 +1,37 @@
+{
+  "name": "ScoreEntry",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "score": {
+      "type": "number"
+    },
+    "level_id": {
+      "type": "number"
+    },
+    "detection_pct": {
+      "type": "number"
+    },
+    "perfect_stealth": {
+      "type": "boolean",
+      "default": false
+    },
+    "run_type": {
+      "type": "string",
+      "enum": [
+        "single_level",
+        "full_run"
+      ],
+      "default": "single_level"
+    }
+  },
+  "required": [
+    "user_email",
+    "score"
+  ]
+}
