@@ -81,15 +81,8 @@ export class GameEngine {
     this.ghostTrail = [];
     this.gameOver = false;
     this.survivalTime = 0;
-    this.missionDuration = 45 + this.levelId * 10; // seconds before exit portal opens
-    // Exit portal — positioned on the right edge, vertically centered
-    this.exitZone = {
-      x: canvas.width - 28,
-      y: canvas.height * 0.5,
-      radius: 36,
-      open: false,      // opens after missionDuration elapses
-      pulseT: 0,
-    };
+    // Gravitational anchor destination — always visible, placed on right edge
+    this.destination = this._generateDestination();
     this.mythTimer = 0;
     this.mythCooldown = 0;
     this.alertLevel = 0;   // 0=calm, 1=suspicious, 2=alert
@@ -107,7 +100,8 @@ export class GameEngine {
     this.objectives = [];
     this.gasParticles = [];
     this.dustParticles = [];
-    this.wormholeAngle = 0; // for wormhole spin animation
+    this.wormholeAngle = 0;
+    this.destinationPulseT = 0;
 
     // Input
     this.keys = {};
@@ -207,6 +201,24 @@ export class GameEngine {
       angle: 0,
       isSun: !!def.isSun,
     }];
+  }
+
+  _generateDestination() {
+    const W = this.canvas.width, H = this.canvas.height;
+    // Place destination on the right side, away from the planet
+    const gw = this.gravityWells[0];
+    // Pick a y position on the opposite vertical side from the planet
+    const yBase = gw && gw.y < H * 0.5 ? H * 0.72 : H * 0.28;
+    const x = W * 0.88 + (Math.random() - 0.5) * W * 0.06;
+    const y = yBase + (Math.random() - 0.5) * H * 0.1;
+    return {
+      x: Math.max(60, Math.min(W - 60, x)),
+      y: Math.max(60, Math.min(H - 60, y)),
+      radius: 28,          // visual radius
+      captureRadius: 50,   // how close Atlas must get to trigger win
+      gravStrength: 0.35,  // gentle pull to guide slingshot trajectories in
+      pulseT: 0,
+    };
   }
 
   _generateThreats() {
@@ -363,7 +375,8 @@ export class GameEngine {
     if (!this.gameOver && !this.levelComplete) {
       this.survivalTime += rawDt;
       this.wormholeAngle += rawDt * 1.8;
-      if (this.exitZone.open) this.exitZone.pulseT += rawDt * 3;
+      this.destinationPulseT += rawDt * 2.5;
+      this.destination.pulseT = this.destinationPulseT;
     }
     this._checkWinLose();
   }
@@ -449,7 +462,6 @@ export class GameEngine {
       const dist = Math.sqrt(distSq);
 
       if (dist < gw.radius + 12) {
-        // Collision with planet — instant game over
         if (!this.gameOver) {
           this.gameOver = true;
           if (this.onGameOver) this.onGameOver('collision');
@@ -462,6 +474,17 @@ export class GameEngine {
         this.atlas.vx += (dx / dist) * force * dt;
         this.atlas.vy += (dy / dist) * force * dt;
       }
+    }
+
+    // Gentle pull from destination anchor
+    const dest = this.destination;
+    const ddx = dest.x - this.atlas.x;
+    const ddy = dest.y - this.atlas.y;
+    const ddist = Math.sqrt(ddx * ddx + ddy * ddy);
+    if (ddist > 1) {
+      const force = (PHYSICS.GRAVITY_CONSTANT * dest.gravStrength) / (ddist * ddist);
+      this.atlas.vx += (ddx / ddist) * force * dt;
+      this.atlas.vy += (ddy / ddist) * force * dt;
     }
   }
 
@@ -699,21 +722,15 @@ export class GameEngine {
     }
     if (this.gameOver || this.levelComplete) return;
 
-    // Open exit portal after mission duration elapses
-    if (this.survivalTime >= this.missionDuration) {
-      this.exitZone.open = true;
-    }
-
-    // Win: player flies into the open exit portal
-    if (this.exitZone.open) {
-      const dx = this.atlas.x - this.exitZone.x;
-      const dy = this.atlas.y - this.exitZone.y;
-      if (Math.sqrt(dx * dx + dy * dy) < this.exitZone.radius + 8) {
-        this.levelComplete = true;
-        this.score += Math.round((1 - this.detection / 100) * 5000);
-        if (this.onScoreChange) this.onScoreChange(this.score);
-        if (this.onLevelComplete) this.onLevelComplete(this.score, this.detection);
-      }
+    // Win: reach the gravitational anchor destination
+    const dest = this.destination;
+    const dx = this.atlas.x - dest.x;
+    const dy = this.atlas.y - dest.y;
+    if (Math.sqrt(dx * dx + dy * dy) < dest.captureRadius) {
+      this.levelComplete = true;
+      this.score += Math.round((1 - this.detection / 100) * 5000);
+      if (this.onScoreChange) this.onScoreChange(this.score);
+      if (this.onLevelComplete) this.onLevelComplete(this.score, this.detection);
     }
   }
 
@@ -817,36 +834,8 @@ export class GameEngine {
       ctx.restore();
     }
 
-    // ── MISSION TIMER ────────────────────────────────────────────────────────
-    if (!this.gameOver && !this.levelComplete) {
-      const remaining = Math.max(0, this.missionDuration - this.survivalTime);
-      const progress = Math.min(1, this.survivalTime / this.missionDuration);
-      const timerColor = remaining < 10 ? `rgba(255,80,80,0.9)` : remaining < 20 ? `rgba(255,200,60,0.85)` : `rgba(100,220,255,0.75)`;
-      const barW = 140;
-      const barH = 5;
-      const bx = W / 2 - barW / 2;
-      const by = 48;
-      ctx.save();
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      ctx.beginPath();
-      ctx.roundRect(bx, by, barW, barH, 3);
-      ctx.fill();
-      ctx.fillStyle = timerColor;
-      ctx.shadowColor = timerColor;
-      ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.roundRect(bx, by, barW * progress, barH, 3);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 11px Orbitron, monospace';
-      ctx.fillStyle = timerColor;
-      ctx.fillText(`${Math.ceil(remaining)}s`, W / 2, by - 4);
-      ctx.restore();
-    }
-
-    // ── EXIT PORTAL ───────────────────────────────────────────────────────────
-    this._drawExitPortal(ctx, W, H, t);
+    // ── DESTINATION ANCHOR ───────────────────────────────────────────────────
+    this._drawDestination(ctx, t);
 
     // ── LEVEL FLASH ───────────────────────────────────────────────────────────
     if (this.levelFlash > 0) {
@@ -1869,55 +1858,111 @@ export class GameEngine {
     ctx.fillRect(0, 0, W, H);
   }
 
-  _drawExitPortal(ctx, W, H, t) {
-    const ez = this.exitZone;
-    ez.x = W - 28; ez.y = H * 0.5;
-    if (!ez.open) {
-      const remaining = Math.max(0, this.missionDuration - this.survivalTime);
-      ctx.save(); ctx.translate(ez.x, ez.y);
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2;
-      ctx.setLineDash([6, 8]);
-      ctx.beginPath(); ctx.arc(0, 0, ez.radius, 0, Math.PI * 2); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = '8px Orbitron, monospace';
-      ctx.textAlign = 'center'; ctx.fillText(`${Math.ceil(remaining)}s`, 0, ez.radius + 14);
-      ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.font = '7px Orbitron, monospace';
-      ctx.fillText('EXIT', 0, -ez.radius - 6);
-      ctx.restore(); return;
-    }
-    const pulse = 0.5 + 0.5 * Math.sin(ez.pulseT);
-    ctx.save(); ctx.translate(ez.x, ez.y);
-    const outerG = ctx.createRadialGradient(0, 0, ez.radius * 0.5, 0, 0, ez.radius * 2.5);
-    outerG.addColorStop(0, `rgba(120,60,255,${0.35 + pulse * 0.1})`);
-    outerG.addColorStop(1, 'transparent');
-    ctx.fillStyle = outerG; ctx.beginPath(); ctx.arc(0, 0, ez.radius * 2.5, 0, Math.PI * 2); ctx.fill();
-    const vortex = ctx.createRadialGradient(0, 0, 0, 0, 0, ez.radius);
-    vortex.addColorStop(0, 'rgba(220,180,255,0.95)');
-    vortex.addColorStop(0.4, 'rgba(140,60,255,0.85)');
-    vortex.addColorStop(1, 'transparent');
-    ctx.fillStyle = vortex; ctx.beginPath(); ctx.arc(0, 0, ez.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowColor = 'rgba(200,100,255,1)'; ctx.shadowBlur = 20;
+  _drawDestination(ctx, t) {
+    const dest = this.destination;
+    const pulse = 0.5 + 0.5 * Math.sin(dest.pulseT);
+    const R = dest.radius;
+
+    ctx.save();
+    ctx.translate(dest.x, dest.y);
+
+    // Outer gravitational field rings (3 animated rings)
     for (let i = 0; i < 3; i++) {
-      const a0 = (i / 3) * Math.PI * 2 + t * 0.003;
-      ctx.beginPath(); ctx.arc(0, 0, ez.radius * 0.72, a0, a0 + Math.PI * 0.65);
-      ctx.strokeStyle = `rgba(255,200,255,${0.5 + pulse * 0.35})`; ctx.lineWidth = 2.5; ctx.stroke();
+      const ringR = R * (2.2 + i * 1.1) + Math.sin(t * 0.002 + i * 1.1) * 6;
+      const alpha = (0.25 - i * 0.07) * (0.6 + pulse * 0.4);
+      ctx.beginPath();
+      ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(80,220,255,${alpha})`;
+      ctx.lineWidth = 1.2 - i * 0.3;
+      ctx.setLineDash([6, 10]);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
+
+    // Rotating capture indicator arc
+    const rotA = t * 0.004;
+    ctx.beginPath();
+    ctx.arc(0, 0, dest.captureRadius, rotA, rotA + Math.PI * 1.5);
+    ctx.strokeStyle = `rgba(100,240,255,${0.4 + pulse * 0.3})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, dest.captureRadius, rotA + Math.PI, rotA + Math.PI * 2.5);
+    ctx.strokeStyle = `rgba(180,120,255,${0.3 + pulse * 0.25})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Glow halo
+    const halo = ctx.createRadialGradient(0, 0, R * 0.3, 0, 0, R * 2.5);
+    halo.addColorStop(0, `rgba(80,210,255,${0.45 + pulse * 0.2})`);
+    halo.addColorStop(0.5, `rgba(60,160,255,${0.18})`);
+    halo.addColorStop(1, 'transparent');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, 0, R * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core anchor body — bright crystalline sphere
+    const core = ctx.createRadialGradient(-R * 0.3, -R * 0.3, R * 0.05, 0, 0, R);
+    core.addColorStop(0, 'rgba(255,255,255,0.95)');
+    core.addColorStop(0.25, 'rgba(140,230,255,0.9)');
+    core.addColorStop(0.7, 'rgba(60,140,255,0.7)');
+    core.addColorStop(1, 'rgba(20,60,180,0.4)');
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, Math.PI * 2);
+    ctx.fillStyle = core;
+    ctx.shadowColor = 'rgba(80,200,255,1)';
+    ctx.shadowBlur = 30 + pulse * 15;
+    ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.beginPath(); ctx.arc(0, 0, ez.radius, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(200,140,255,${0.7 + pulse * 0.3})`; ctx.lineWidth = 2.5;
-    ctx.shadowColor = 'rgba(180,80,255,1)'; ctx.shadowBlur = 18; ctx.stroke(); ctx.shadowBlur = 0;
-    ctx.fillStyle = `rgba(220,180,255,${0.8 + pulse * 0.2})`;
-    ctx.font = 'bold 9px Orbitron, monospace'; ctx.textAlign = 'center';
-    ctx.fillText('EXIT', 0, ez.radius + 14); ctx.restore();
-    // Arrow guide
-    const dx = ez.x - this.atlas.x, dy = ez.y - this.atlas.y;
-    if (Math.sqrt(dx * dx + dy * dy) > ez.radius + 60) {
+
+    // Inner spinning diamond cross
+    ctx.save();
+    ctx.rotate(t * 0.003);
+    ctx.strokeStyle = `rgba(200,240,255,${0.7 + pulse * 0.3})`;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = 'rgba(150,220,255,1)';
+    ctx.shadowBlur = 8;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * R * 1.5, Math.sin(a) * R * 1.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.restore();
+
+    // Label
+    ctx.fillStyle = `rgba(140,230,255,${0.7 + pulse * 0.3})`;
+    ctx.font = 'bold 9px Orbitron, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('DESTINATION', dest.x, dest.y + R + 16);
+    ctx.fillStyle = `rgba(255,255,255,0.4)`;
+    ctx.font = '8px Orbitron, monospace';
+    ctx.fillText('SLINGSHOT IN', dest.x, dest.y + R + 26);
+
+    // Arrow guide from Atlas toward destination
+    const dx = dest.x - this.atlas.x, dy = dest.y - this.atlas.y;
+    const distToTarget = Math.sqrt(dx * dx + dy * dy);
+    if (distToTarget > dest.captureRadius + 80) {
       const angle = Math.atan2(dy, dx);
-      ctx.save(); ctx.translate(this.atlas.x + Math.cos(angle) * 55, this.atlas.y + Math.sin(angle) * 55);
-      ctx.rotate(angle); ctx.fillStyle = `rgba(200,140,255,${0.6 + pulse * 0.4})`;
-      ctx.shadowColor = 'rgba(180,80,255,1)'; ctx.shadowBlur = 8;
-      ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(-6,6); ctx.lineTo(-6,-6); ctx.closePath(); ctx.fill();
-      ctx.shadowBlur = 0; ctx.restore();
+      const arrowAlpha = 0.5 + pulse * 0.35;
+      ctx.save();
+      ctx.translate(this.atlas.x + Math.cos(angle) * 60, this.atlas.y + Math.sin(angle) * 60);
+      ctx.rotate(angle);
+      ctx.fillStyle = `rgba(80,220,255,${arrowAlpha})`;
+      ctx.shadowColor = 'rgba(80,200,255,1)';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(10, 0);
+      ctx.lineTo(-7, 6);
+      ctx.lineTo(-7, -6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
     }
   }
 
@@ -1927,6 +1972,7 @@ export class GameEngine {
     this.stars = this._generateStars(500);
     this.nebulaDust = this._generateNebulaDust(80);
     this.gravityWells = this._generateGravityWells();
+    this.destination = this._generateDestination();
     this.objectives = [];
   }
 }
