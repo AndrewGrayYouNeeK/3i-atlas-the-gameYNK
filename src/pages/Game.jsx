@@ -184,7 +184,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-background">
+    <div className="relative w-screen h-screen overflow-hidden" style={{ background: '#01010c' }}>
       {/* Game Canvas */}
       <div
         className="absolute inset-0"

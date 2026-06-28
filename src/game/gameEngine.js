@@ -81,8 +81,6 @@ export class GameEngine {
     this.ghostTrail = [];
     this.gameOver = false;
     this.survivalTime = 0;
-    // Gravitational anchor destination — always visible, placed on right edge
-    this.destination = this._generateDestination();
     this.mythTimer = 0;
     this.mythCooldown = 0;
     this.alertLevel = 0;   // 0=calm, 1=suspicious, 2=alert
@@ -91,11 +89,12 @@ export class GameEngine {
     this.screenShake = 0;
     this.solarWind = this._getSolarWind();
 
-    // World
+    // World — gravityWells must be generated before destination
     this.stars = this._generateStars(500);
     this.nebulaDust = this._generateNebulaDust(80);
-    this.asteroids = []; // removed
+    this.asteroids = [];
     this.gravityWells = this._generateGravityWells();
+    this.destination = this._generateDestination();
     this.threats = this._generateThreats();
     this.objectives = [];
     this.gasParticles = [];
