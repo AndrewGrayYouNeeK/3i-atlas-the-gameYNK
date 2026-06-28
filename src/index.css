@@ -1,31 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;600&display=swap');
-
 @layer base {
   :root {
-    color-scheme: light;
-    --background: 252 100% 99%;
-    --foreground: 240 18% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 18% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 18% 12%;
-    --primary: 270 80% 52%;
+    color-scheme: dark;
+    --background: 240 20% 4%;
+    --foreground: 220 20% 95%;
+    --card: 240 15% 8%;
+    --card-foreground: 220 20% 95%;
+    --popover: 240 15% 8%;
+    --popover-foreground: 220 20% 95%;
+    --primary: 270 80% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 200 78% 46%;
+    --secondary: 200 70% 50%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 250 25% 94%;
-    --muted-foreground: 240 10% 40%;
-    --accent: 160 78% 38%;
+    --muted: 240 10% 15%;
+    --muted-foreground: 220 15% 55%;
+    --accent: 160 80% 45%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 52%;
+    --destructive: 0 85% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 18% 86%;
-    --input: 240 20% 96%;
-    --ring: 270 80% 52%;
+    --border: 240 15% 18%;
+    --input: 240 15% 12%;
+    --ring: 270 80% 60%;
     --radius: 0.5rem;
     --neon-purple: 270 80% 60%;
     --neon-cyan: 185 100% 60%;
@@ -85,11 +85,7 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-  }
-}
+
 
 .font-orbitron {
   font-family: 'Orbitron', sans-serif;
