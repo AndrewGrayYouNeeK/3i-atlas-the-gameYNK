@@ -62,7 +62,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: #01010c;
     font-family: 'Exo 2', sans-serif;
     overflow: hidden;
     overscroll-behavior: none;
