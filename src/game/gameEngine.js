@@ -89,6 +89,11 @@ export class GameEngine {
     this.screenShake = 0;
     this.solarWind = this._getSolarWind();
 
+    // World — wider than the viewport; a scrolling camera follows Atlas
+    this.worldWidth = canvas.width * 3.5;
+    this.worldHeight = canvas.height;
+    this.camera = { x: 0, y: 0 };
+
     // World — gravityWells must be generated before destination
     this.stars = this._generateStars(500);
     this.nebulaDust = this._generateNebulaDust(80);
@@ -167,9 +172,9 @@ export class GameEngine {
   }
 
   _generateGravityWells() {
-    const W = this.canvas.width, H = this.canvas.height;
+    const W = this.worldWidth, H = this.worldHeight;
 
-    // One planet per level — mapped by levelId
+    // One main planet per level — mapped by levelId
     const levelPlanetIndex = [
       0, // Level 0: Neptune (Kuiper Belt)
       4, // Level 1: Jupiter
@@ -184,11 +189,11 @@ export class GameEngine {
     const radius = def.radius;
     const influenceRadius = radius * 5 + 60;
 
-    // Place the planet roughly center-canvas, with some vertical randomness
-    const x = W * 0.5 + (Math.random() - 0.5) * W * 0.2;
-    const y = H * 0.5 + (Math.random() - 0.5) * H * 0.3;
+    // Main planet in the first third of the world
+    const x = W * 0.28 + (Math.random() - 0.5) * W * 0.06;
+    const y = H * 0.5 + (Math.random() - 0.5) * H * 0.25;
 
-    return [{
+    const wells = [{
       x, y,
       radius,
       influenceRadius,
@@ -200,22 +205,38 @@ export class GameEngine {
       angle: 0,
       isSun: !!def.isSun,
     }];
+
+    // Secondary body — a small moon for a mid-journey slingshot
+    const moonR = 11 + Math.random() * 4;
+    wells.push({
+      x: W * 0.62 + (Math.random() - 0.5) * W * 0.05,
+      y: H * 0.4 + (Math.random() - 0.5) * H * 0.35,
+      radius: moonR,
+      influenceRadius: moonR * 5 + 40,
+      strength: 0.6,
+      color: '#9aa3b0',
+      name: 'Ice Moon',
+      def: { name: 'Ice Moon', color: '#9aa3b0', radius: moonR, type: 'scorched', ringCount: 0 },
+      ringCount: 0,
+      angle: 0,
+      isSun: false,
+    });
+
+    return wells;
   }
 
   _generateDestination() {
-    const W = this.canvas.width, H = this.canvas.height;
-    // Place destination on the right side, away from the planet
+    const W = this.worldWidth, H = this.worldHeight;
     const gw = this.gravityWells[0];
-    // Pick a y position on the opposite vertical side from the planet
     const yBase = gw && gw.y < H * 0.5 ? H * 0.72 : H * 0.28;
-    const x = W * 0.88 + (Math.random() - 0.5) * W * 0.06;
+    const x = W * 0.95 + (Math.random() - 0.5) * W * 0.02;
     const y = yBase + (Math.random() - 0.5) * H * 0.1;
     return {
       x: Math.max(60, Math.min(W - 60, x)),
       y: Math.max(60, Math.min(H - 60, y)),
-      radius: 28,          // visual radius
-      captureRadius: 50,   // how close Atlas must get to trigger win
-      gravStrength: 0.35,  // gentle pull to guide slingshot trajectories in
+      radius: 28,
+      captureRadius: 50,
+      gravStrength: 0.35,
       pulseT: 0,
     };
   }
@@ -223,7 +244,7 @@ export class GameEngine {
   _generateThreats() {
     const cfg = this.level.threatConfig;
     const threats = [];
-    const W = this.canvas.width, H = this.canvas.height;
+    const W = this.worldWidth, H = this.worldHeight;
     let id = 0;
 
     // Build a pool of anchor positions: near planets + open space between them
@@ -243,6 +264,11 @@ export class GameEngine {
     for (let i = 0; i < this.gravityWells.length - 1; i++) {
       const a = this.gravityWells[i], b = this.gravityWells[i + 1];
       anchorPool.push({ x: (a.x + b.x) / 2 + (Math.random() - 0.5) * 80, y: 80 + Math.random() * (H - 160) });
+    }
+    // Open-space anchors spread across the full journey
+    const spreadCount = 6;
+    for (let i = 1; i <= spreadCount; i++) {
+      anchorPool.push({ x: (W * i) / (spreadCount + 1), y: 80 + Math.random() * (H - 160) });
     }
     let anchorIdx = 0;
 
@@ -363,6 +389,9 @@ export class GameEngine {
   _update(dt, rawDt, t) {
     this._applyGravity(dt);
     this._updateAtlas(dt);
+    // Camera follows Atlas horizontally, clamped to world bounds
+    const vw = this.canvas.width;
+    this.camera.x = Math.max(0, Math.min(this.worldWidth - vw, this.atlas.x - vw / 2));
     this._updateThreats(dt, t);
     this._updateGas(rawDt);
     this._updateMyth(rawDt);
@@ -424,11 +453,9 @@ export class GameEngine {
     a.y += a.vy;
     a.nucleusAngle += 0.004;
 
-    // Wrap
-    if (a.x < -30) a.x = this.canvas.width + 30;
-    if (a.x > this.canvas.width + 30) a.x = -30;
-    if (a.y < -30) a.y = this.canvas.height + 30;
-    if (a.y > this.canvas.height + 30) a.y = -30;
+    // Keep Atlas inside the world bounds
+    a.x = Math.max(20, Math.min(this.worldWidth - 20, a.x));
+    a.y = Math.max(20, Math.min(this.worldHeight - 20, a.y));
 
     // Dust trail — emitted opposite to velocity so it streams behind the comet
     const vel = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
@@ -533,8 +560,8 @@ export class GameEngine {
         threat.x += threat.vx;
         threat.y += threat.vy;
         // Bounce off edges
-        if (threat.x < 30 || threat.x > this.canvas.width - 30) { threat.vx *= -1; threat.x = Math.max(30, Math.min(this.canvas.width - 30, threat.x)); }
-        if (threat.y < 30 || threat.y > this.canvas.height - 30) { threat.vy *= -1; threat.y = Math.max(30, Math.min(this.canvas.height - 30, threat.y)); }
+        if (threat.x < 30 || threat.x > this.worldWidth - 30) { threat.vx *= -1; threat.x = Math.max(30, Math.min(this.worldWidth - 30, threat.x)); }
+        if (threat.y < 30 || threat.y > this.worldHeight - 30) { threat.vy *= -1; threat.y = Math.max(30, Math.min(this.worldHeight - 30, threat.y)); }
       }
 
       // Scan rotation
@@ -781,12 +808,26 @@ export class GameEngine {
 
     this._drawNebula(ctx, W, H, t);
     this._drawStars(ctx, t);
+
+    // World-space layer — camera pans horizontally across the level
+    ctx.save();
+    ctx.translate(-this.camera.x, 0);
     this._drawGravityWells(ctx, t);
     this._drawThreats(ctx, t);
     this._drawGasParticles(ctx);
     this._drawDustParticles(ctx);
     this._drawCometTail(ctx, t);
     this._drawComet(ctx, t);
+    this._drawDestination(ctx, t);
+    ctx.restore();
+
+    // Screen-space vignette
+    const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.82);
+    vig.addColorStop(0, 'transparent');
+    vig.addColorStop(1, 'rgba(0,0,8,0.60)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+
     this._drawLensFlares(ctx, W, H, t);
 
     // Eye mode overlays
@@ -832,9 +873,6 @@ export class GameEngine {
       ctx.strokeRect(0, 0, W, H);
       ctx.restore();
     }
-
-    // ── DESTINATION ANCHOR ───────────────────────────────────────────────────
-    this._drawDestination(ctx, t);
 
     // ── LEVEL FLASH ───────────────────────────────────────────────────────────
     if (this.levelFlash > 0) {
@@ -1848,13 +1886,6 @@ export class GameEngine {
       ctx.restore();
     }
 
-    // ── VIGNETTE ──────────────────────────────────────────────────────────────
-    const W = this.canvas.width, H = this.canvas.height;
-    const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.82);
-    vig.addColorStop(0, 'transparent');
-    vig.addColorStop(1, 'rgba(0,0,8,0.60)');
-    ctx.fillStyle = vig;
-    ctx.fillRect(0, 0, W, H);
   }
 
   _drawDestination(ctx, t) {
@@ -1968,6 +1999,9 @@ export class GameEngine {
   resize(width, height) {
     this.canvas.width = width;
     this.canvas.height = height;
+    this.worldWidth = width * 3.5;
+    this.worldHeight = height;
+    this.camera.x = Math.max(0, Math.min(this.worldWidth - width, this.atlas.x - width / 2));
     this.stars = this._generateStars(500);
     this.nebulaDust = this._generateNebulaDust(80);
     this.gravityWells = this._generateGravityWells();
