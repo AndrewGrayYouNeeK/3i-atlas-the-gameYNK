@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GameCanvas from '../components/game/GameCanvas.jsx';
 import DetectionHUD from '../components/game/DetectionHUD.jsx';
-import DetectionTensionGauge from '../components/game/DetectionTensionGauge.jsx';
 import GasSelector from '../components/game/GasSelector.jsx';
 import EyePanel from '../components/game/EyePanel.jsx';
 import ObjectivesPanel from '../components/game/ObjectivesPanel.jsx';
@@ -218,7 +217,6 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
             className="absolute inset-0 pointer-events-none"
           >
             <DetectionHUD detection={detection} score={score} level={levelId} />
-            <DetectionTensionGauge detection={detection} />
             <ObjectivesPanel objectives={objectives} levelName={LEVELS[levelId]?.name} />
             <div className="pointer-events-auto">
               <GasSelector activeGas={activeGas} cooldowns={gasCooldowns} charges={gasCharges} onActivate={activateGas} />
