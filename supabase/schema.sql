@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS player_profiles (
   owned_skins text[] DEFAULT ARRAY['default'],
   gas_charges jsonb DEFAULT '{"methane": 3, "ammonia": 3, "xenon": 3}'::jsonb,
   owned_powerups jsonb DEFAULT '{"gravity_shield": 0, "probe_scrambler": 0, "stealth_cloak": 0}'::jsonb,
+  achievements text[] DEFAULT ARRAY[]::text[],
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -92,7 +93,5 @@ END;
 $$ language 'plpgsql';
 
 -- Trigger to automatically update updated_at on player_profiles
-CREATE TRIGGER update_player_profiles_updated_at
-  BEFORE UPDATE ON player_profiles
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Optional migration for existing databases
+ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS achievements text[] DEFAULT ARRAY[]::text[];

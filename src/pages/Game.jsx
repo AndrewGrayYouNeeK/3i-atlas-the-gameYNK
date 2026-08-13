@@ -12,9 +12,18 @@ import EndgameScreen from '../components/game/EndgameScreen.jsx';
 import PostRunStatsScreen from '../components/game/PostRunStatsScreen.jsx';
 import PauseMenu from '../components/game/PauseMenu.jsx';
 import { LEVELS } from '../game/constants.js';
+import { getDailyChallenge } from '../game/dailyChallenge.js';
 import { api } from '@/api/supabaseApi';
 
-export default function Game({ levelId: initialLevel = 0, difficulty = 'medium', skin = 'default', onMainMenu, totalScoreRef }) {
+export default function Game({ levelId: initialLevel = 0, difficulty = 'medium', skin = 'default', mode = 'mission', onMainMenu, totalScoreRef }) {
+  const dailyChallenge = mode === 'daily' ? getDailyChallenge() : null;
+  const engineOptions = {
+    mode,
+    threatBonus: dailyChallenge?.threatBonus || 0,
+    scanMult: dailyChallenge?.scanMult || 1,
+    gasPenalty: dailyChallenge?.gasPenalty || 0,
+  };
+
   const [levelId, setLevelId] = useState(initialLevel);
 
   useEffect(() => {
@@ -40,6 +49,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
   const [mythCooldown, setMythCooldown] = useState(0);
   const [speed, setSpeed] = useState(2);
   const [paused, setPaused] = useState(false);
+  const [comboMultiplier, setComboMultiplier] = useState(1);
   const [state, setState] = useState('playing'); // playing | level_complete | game_over | endgame
 
   const engineRef = useRef(null);
@@ -81,6 +91,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
     return (3 - (current.methane || 0)) + (3 - (current.ammonia || 0)) + (3 - (current.xenon || 0));
   };
   const handleScoreChange = useCallback((s) => setScore(s), []);
+  const handleComboChange = useCallback((mult) => setComboMultiplier(mult), []);
   const handleObjectiveUpdate = useCallback((objs) => setObjectives([...objs]), []);
 
   const handleLevelComplete = useCallback(async (s, d) => {
@@ -102,7 +113,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
           level_id: levelId,
           detection_pct: d,
           perfect_stealth: perfect,
-          run_type: 'single_level',
+          run_type: mode === 'solar_run' ? 'full_run' : mode === 'daily' ? 'single_level' : 'single_level',
         });
         const profiles = await api.entities.PlayerProfile.filter({ user_email: me.email });
         if (profiles?.length > 0) {
@@ -194,9 +205,11 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
         levelId={levelId}
         difficulty={difficulty}
         skin={skin}
+        engineOptions={engineOptions}
         onDetectionChange={handleDetectionChange}
         onGasChange={handleGasChange}
         onScoreChange={handleScoreChange}
+        onComboChange={handleComboChange}
         onLevelComplete={handleLevelComplete}
         onGameOver={handleGameOver}
         onObjectiveUpdate={handleObjectiveUpdate}
@@ -216,7 +229,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
             exit={{ opacity: 0 }}
             className="absolute inset-0 pointer-events-none"
           >
-            <DetectionHUD detection={detection} score={score} level={levelId} />
+            <DetectionHUD detection={detection} score={score} level={levelId} comboMultiplier={comboMultiplier} />
             <ObjectivesPanel objectives={objectives} levelName={LEVELS[levelId]?.name} />
             <div className="pointer-events-auto">
               <GasSelector activeGas={activeGas} cooldowns={gasCooldowns} charges={gasCharges} onActivate={activateGas} />

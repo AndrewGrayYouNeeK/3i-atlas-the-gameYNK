@@ -38,7 +38,7 @@ export class GameEngine {
     };
   }
 
-  constructor(canvas, levelId, difficultyId = 'medium', skinId = 'default') {
+  constructor(canvas, levelId, difficultyId = 'medium', skinId = 'default', options = {}) {
     this.canvas = canvas;
     GameEngine.preloadAssets();
     this.ctx = canvas.getContext('2d');
@@ -46,6 +46,9 @@ export class GameEngine {
     this.level = LEVELS[levelId];
     this.difficulty = DIFFICULTIES[difficultyId] || DIFFICULTIES.medium;
     this.skin = SKINS.find(s => s.id === skinId) || SKINS[0];
+    this.mode = options.mode || 'mission';
+    this.threatBonus = options.threatBonus || 0;
+    this.scanMult = options.scanMult || 1;
     this.running = false;
     this.animFrame = null;
     this.lastTime = 0;
@@ -71,7 +74,18 @@ export class GameEngine {
     this.gasCooldowns = { methane: 0, ammonia: 0, xenon: 0 };
     // Gas charges by difficulty: easy=5, medium=3, hard=2
     const gasCount = this.difficulty.id === 'easy' ? 5 : this.difficulty.id === 'hard' ? 2 : 3;
-    this.gasCharges = { methane: gasCount, ammonia: gasCount, xenon: gasCount };
+    const gasPenalty = options.gasPenalty || 0;
+    const effectiveGas = Math.max(1, gasCount - gasPenalty);
+    this.gasCharges = { methane: effectiveGas, ammonia: effectiveGas, xenon: effectiveGas };
+
+    // Stealth combo — rewards sustained low detection
+    this.stealthCombo = 0;
+    this.comboMultiplier = 1;
+    this.comboTimer = 0;
+    this.onComboChange = null;
+
+    // Energy orbs — bonus score + slight detection relief
+    this.collectibles = this._generateCollectibles();
 
     // Game state
     this.detection = 0;
@@ -183,6 +197,7 @@ export class GameEngine {
       1, // Level 4: Venus
       0, // Level 5: Neptune (Blue Dark)
       7, // Level 6: Mercury (Sunline)
+      8, // Level 7: Sun Dive
     ];
     const planetIdx = levelPlanetIndex[Math.min(this.levelId, levelPlanetIndex.length - 1)];
     const def = SOLAR_SYSTEM_PLANETS[planetIdx];
@@ -338,7 +353,7 @@ export class GameEngine {
           y: 80 + Math.random() * (H - 160),
         }));
         // Scale scan radius with difficulty: easy=0.7x, medium=1.0x, hard=1.3x
-        const scanRadiusMult = this.difficulty.id === 'easy' ? 0.7 : this.difficulty.id === 'hard' ? 1.3 : 1.0;
+        const scanRadiusMult = (this.difficulty.id === 'easy' ? 0.7 : this.difficulty.id === 'hard' ? 1.3 : 1.0) * this.scanMult;
         threats.push({
           id: id++, type, ...c,
           scanRadius: c.scanRadius * scanRadiusMult,
@@ -359,7 +374,27 @@ export class GameEngine {
     };
 
     Object.entries(cfg).forEach(([type, count]) => add(type, count));
+    if (this.threatBonus > 0) {
+      const types = Object.keys(cfg).filter((k) => cfg[k] > 0);
+      for (let i = 0; i < this.threatBonus; i++) {
+        add(types[i % types.length] || 'probe', 1);
+      }
+    }
     return threats;
+  }
+
+  _generateCollectibles() {
+    const W = this.worldWidth, H = this.worldHeight;
+    const count = 4 + Math.floor(this.levelId / 2);
+    return Array.from({ length: count }, (_, i) => ({
+      id: i,
+      x: W * (0.15 + (i + 1) / (count + 2) * 0.65) + (Math.random() - 0.5) * 60,
+      y: 80 + Math.random() * (H - 160),
+      radius: 14,
+      pulse: Math.random() * Math.PI * 2,
+      collected: false,
+      value: 250 + this.levelId * 80,
+    }));
   }
 
   // ─── LIFECYCLE ─────────────────────────────────────────────────────────────
@@ -396,7 +431,9 @@ export class GameEngine {
     this._updateGas(rawDt);
     this._updateMyth(rawDt);
     this._updateDetection(dt);
+    this._updateCombo(dt);
     this._updateObjectives(t);
+    this._updateCollectibles(t);
     this._updateParticles(dt);
     this.screenShake = Math.max(0, this.screenShake - dt * 2.8);
     if (this.levelFlash > 0) this.levelFlash = Math.max(0, this.levelFlash - dt);
@@ -712,6 +749,40 @@ export class GameEngine {
     if (this.onDetectionChange) this.onDetectionChange(this.detection);
   }
 
+  _updateCombo(dt) {
+    if (this.gameOver || this.levelComplete) return;
+    if (this.detection < 5) {
+      this.stealthCombo += dt;
+      this.comboTimer = 2.5;
+      const tier = Math.min(5, Math.floor(this.stealthCombo / 4));
+      this.comboMultiplier = 1 + tier * 0.25;
+    } else if (this.detection > 15) {
+      this.stealthCombo = 0;
+      this.comboMultiplier = 1;
+    }
+    if (this.comboTimer > 0) {
+      this.comboTimer -= dt;
+      if (this.onComboChange) this.onComboChange(this.comboMultiplier, this.stealthCombo);
+    }
+  }
+
+  _updateCollectibles(t) {
+    for (const orb of this.collectibles) {
+      if (orb.collected) continue;
+      orb.pulse += 0.06;
+      const dx = this.atlas.x - orb.x;
+      const dy = this.atlas.y - orb.y;
+      if (Math.sqrt(dx * dx + dy * dy) < orb.radius + 12) {
+        orb.collected = true;
+        const bonus = Math.round(orb.value * this.comboMultiplier);
+        this.score += bonus;
+        this.detection = Math.max(0, this.detection - 1.5);
+        if (this.onScoreChange) this.onScoreChange(this.score);
+        if (this.onDetectionChange) this.onDetectionChange(this.detection);
+      }
+    }
+  }
+
   _updateObjectives(t) {
     for (const obj of this.objectives) {
       if (obj.done) continue;
@@ -721,6 +792,8 @@ export class GameEngine {
       if (Math.sqrt(dx * dx + dy * dy) < obj.radius + 8) {
         obj.done = true;
         this.score += 1000;
+        const comboBonus = Math.round(500 * this.comboMultiplier);
+        this.score += comboBonus;
         if (this.onObjectiveUpdate) this.onObjectiveUpdate(this.objectives);
         if (this.onScoreChange) this.onScoreChange(this.score);
       }
@@ -754,7 +827,9 @@ export class GameEngine {
     const dy = this.atlas.y - dest.y;
     if (Math.sqrt(dx * dx + dy * dy) < dest.captureRadius) {
       this.levelComplete = true;
-      this.score += Math.round((1 - this.detection / 100) * 5000);
+      const stealthBonus = Math.round((1 - this.detection / 100) * 5000);
+      const comboBonus = Math.round(this.stealthCombo * 40 * this.comboMultiplier);
+      this.score += stealthBonus + comboBonus;
       if (this.onScoreChange) this.onScoreChange(this.score);
       if (this.onLevelComplete) this.onLevelComplete(this.score, this.detection);
     }
@@ -814,6 +889,7 @@ export class GameEngine {
     ctx.translate(-this.camera.x, 0);
     this._drawGravityWells(ctx, t);
     this._drawThreats(ctx, t);
+    this._drawCollectibles(ctx, t);
     this._drawGasParticles(ctx);
     this._drawDustParticles(ctx);
     this._drawCometTail(ctx, t);
@@ -1559,6 +1635,30 @@ export class GameEngine {
       ctx.textAlign = 'center';
       ctx.fillText(threatLabels[threat.type] || threat.type.toUpperCase(), 0, threat.size + 13);
 
+      ctx.restore();
+    }
+  }
+
+  _drawCollectibles(ctx, t) {
+    for (const orb of this.collectibles) {
+      if (orb.collected) continue;
+      const pulse = 0.6 + 0.4 * Math.sin(orb.pulse + t * 0.003);
+      ctx.save();
+      ctx.translate(orb.x, orb.y);
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, orb.radius * 2);
+      grad.addColorStop(0, `rgba(180,255,220,${pulse * 0.9})`);
+      grad.addColorStop(0.5, `rgba(100,200,255,${pulse * 0.4})`);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, orb.radius * 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, 0, orb.radius * 0.45, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(220,255,255,${pulse})`;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#88ccff';
+      ctx.fill();
       ctx.restore();
     }
   }

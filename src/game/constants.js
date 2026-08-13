@@ -105,6 +105,21 @@ export const LEVELS = [
     threatConfig: { probe: 1, satellite: 2, hunter: 1, deepSpace: 2, relay: 1 },
     hint: 'Every scanner here was built to find alien ships. You are one. Match each gas to its threat, drift the rest.',
   },
+  {
+    id: 7,
+    name: 'Sun Dive',
+    subtitle: 'Final Infiltration',
+    description: 'The last stretch to the Sun. Every threat type converges on the approach vector. Chain stealth combos on energy orbs, burn gas in sequence, and coast the final arc at zero thrust.',
+    detectionLimit: 5,
+    threatCount: 8,
+    asteroidCount: 14,
+    gravityWells: 4,
+    bgColor: '#1a0800',
+    nebulaColor: 'rgba(255,100,0,0.22)',
+    lore: 'Atlas has crossed this void three times before. The Sun is not the destination — it is the blind spot. Humanity built their deepest sensors to watch the dark, not the light.',
+    threatConfig: { probe: 2, satellite: 2, hunter: 1, deepSpace: 2, relay: 1 },
+    hint: 'Collect energy orbs for combo multipliers. Xenon → Ammonia → Methane — then drift.',
+  },
 ];
 
 // The full solar system layout used by the Solar Run mode
