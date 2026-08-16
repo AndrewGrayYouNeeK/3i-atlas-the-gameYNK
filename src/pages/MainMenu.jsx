@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, BookOpen, ChevronRight, ShoppingCart, Trophy } from 'lucide-react';
+import { Play, BookOpen, ChevronRight, ShoppingCart, Trophy, Zap, Orbit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LEVELS, DIFFICULTIES } from '../game/constants.js';
+import { getDailyChallenge } from '../game/dailyChallenge.js';
 import AchievementsPanel from '../components/menu/AchievementsPanel.jsx';
 import SkinSelector from '../components/menu/SkinSelector.jsx';
+import CometLogo from '../components/menu/CometLogo.jsx';
 import { api } from '@/api/supabaseApi';
 
 const TUTORIAL_STEPS = [
@@ -46,9 +48,9 @@ const TUTORIAL_STEPS = [
   },
 ];
 
-const LEVEL_COLORS = ['#7c3aed', '#0ea5e9', '#dc2626', '#059669', '#f97316', '#2563eb', '#eab308'];
-const LEVEL_ICONS = ['❄️', '🪐', '🔴', '🌍', '☁️', '🔵', '☀️'];
-const DIFFICULTY = ['EASY', 'MEDIUM', 'HARD', 'EXTREME', 'EXTREME', 'EXTREME', 'EXTREME'];
+const LEVEL_COLORS = ['#7c3aed', '#0ea5e9', '#dc2626', '#059669', '#f97316', '#2563eb', '#eab308', '#ff6600'];
+const LEVEL_ICONS = ['❄️', '🪐', '🔴', '🌍', '☁️', '🔵', '☀️', '🔥'];
+const DIFFICULTY = ['EASY', 'MEDIUM', 'HARD', 'EXTREME', 'EXTREME', 'EXTREME', 'EXTREME', 'EXTREME'];
 const DIFF_COLORS = ['text-emerald-400', 'text-amber-400', 'text-orange-400', 'text-red-400', 'text-red-400', 'text-red-400', 'text-red-400'];
 
 export default function MainMenu({ onStartGame }) {
@@ -148,6 +150,7 @@ export default function MainMenu({ onStartGame }) {
   }, []);
 
   const selectedLvl = LEVELS[selectedLevel];
+  const daily = getDailyChallenge();
 
   return (
     <div className="relative w-screen h-screen overflow-x-hidden overflow-y-auto overscroll-none font-exo" style={{ background: '#01010c' }}>
@@ -167,17 +170,11 @@ export default function MainMenu({ onStartGame }) {
         >
           {/* Logo */}
           <motion.div
-            className="mx-auto mb-4 relative overflow-hidden rounded-full"
-            style={{ width: 200, height: 200 }}
-            animate={{ y: [0, -6, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+            className="mx-auto mb-4 relative"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
           >
-            <img
-              src="https://media.base44.com/images/public/69c4f62dd2377e8a872fb70a/3f325a68e_1kZLUqBWADV7yDGYIZhNd_MbHqvn4A.png"
-              alt="3i-Atlas The Game"
-              className="w-full h-full object-cover"
-              style={{ mixBlendMode: 'screen', filter: 'drop-shadow(0 0 30px rgba(140,80,255,0.7)) drop-shadow(0 0 60px rgba(140,80,255,0.3))', transform: 'scale(1.15)' }}
-            />
+            <CometLogo size={200} />
           </motion.div>
 
           <div className="text-xs tracking-widest mt-1 mb-1" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: "'Exo 2', sans-serif" }}>
@@ -286,6 +283,48 @@ export default function MainMenu({ onStartGame }) {
           </div>
         </motion.div>
 
+        {/* ── GAME MODES ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45, duration: 0.6 }}
+          className="w-full max-w-xl mb-5"
+        >
+          <div className="font-orbitron text-[11px] text-white/25 tracking-[0.3em] text-center mb-3">
+            GAME MODES
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <motion.button
+              onClick={() => navigate(`/game?level=0&difficulty=${difficulty}&skin=${selectedSkin}&mode=solar_run`)}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              className="p-4 rounded-2xl border text-left transition-all"
+              style={{ borderColor: 'rgba(251,191,36,0.45)', background: 'rgba(251,191,36,0.08)', boxShadow: '0 0 20px rgba(251,191,36,0.15)' }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Orbit className="w-4 h-4 text-amber-400" />
+                <span className="font-orbitron text-xs font-bold text-amber-300">SOLAR RUN</span>
+              </div>
+              <p className="text-[10px] text-white/45 leading-relaxed">All {LEVELS.length} missions in one epic voyage from the Kuiper Belt to the Sun.</p>
+            </motion.button>
+            <motion.button
+              onClick={() => navigate(`/game?level=${daily.levelId}&difficulty=${daily.difficulty}&skin=${selectedSkin}&mode=daily`)}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              className="p-4 rounded-2xl border text-left transition-all"
+              style={{ borderColor: 'rgba(52,211,153,0.45)', background: 'rgba(52,211,153,0.08)', boxShadow: '0 0 20px rgba(52,211,153,0.15)' }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Zap className="w-4 h-4 text-emerald-400" />
+                <span className="font-orbitron text-xs font-bold text-emerald-300">DAILY CHALLENGE</span>
+              </div>
+              <p className="text-[10px] text-white/45 leading-relaxed">
+                {daily.level.name} · {daily.difficultyDef.label} · {daily.bonusLabel}
+              </p>
+            </motion.button>
+          </div>
+        </motion.div>
+
         {/* ── SKIN SELECTOR ── */}
         <SkinSelector
           ownedSkins={ownedSkins}
@@ -317,7 +356,7 @@ export default function MainMenu({ onStartGame }) {
             </motion.button>
 
             <motion.button
-              onClick={() => navigate(`/game?level=${selectedLevel}&difficulty=${difficulty}&skin=${selectedSkin}`)}
+              onClick={() => navigate(`/game?level=${selectedLevel}&difficulty=${difficulty}&skin=${selectedSkin}&mode=mission`)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               className="flex flex-1 justify-center items-center gap-3 px-8 py-4 rounded-2xl font-orbitron text-base font-bold text-white tracking-wider transition-all duration-200 outline-none"

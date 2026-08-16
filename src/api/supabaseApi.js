@@ -1,62 +1,130 @@
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
 
-/**
- * API wrapper using Base44 SDK — drop-in replacement for the old Supabase API.
- * All pages (Game, MainMenu, Store, Leaderboard) import { api } from '@/api/supabaseApi'
- * and use api.entities.PlayerProfile / api.entities.ScoreEntry / api.auth / api.functions.
- */
+function applyFilters(query, filters = {}) {
+  let q = query;
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null) continue;
+    q = q.eq(key, value);
+  }
+  return q;
+}
+
+function parseOrderBy(orderBy = '-score') {
+  const descending = orderBy.startsWith('-');
+  const column = descending ? orderBy.slice(1) : orderBy;
+  return { column, ascending: !descending };
+}
 
 const PlayerProfile = {
-  async filter(query) {
-    return await base44.entities.PlayerProfile.filter(query);
+  async filter(query = {}) {
+    const { data, error } = await applyFilters(
+      supabase.from('player_profiles').select('*'),
+      query
+    );
+    if (error) throw error;
+    return data || [];
   },
+
   async create(profileData) {
-    return await base44.entities.PlayerProfile.create(profileData);
+    const { data: { user } } = await supabase.auth.getUser();
+    const payload = {
+      ...profileData,
+      user_id: user?.id ?? profileData.user_id,
+    };
+    const { data, error } = await supabase
+      .from('player_profiles')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
+
   async update(id, updates) {
-    return await base44.entities.PlayerProfile.update(id, updates);
+    const { data, error } = await supabase
+      .from('player_profiles')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
+
   async delete(id) {
-    return await base44.entities.PlayerProfile.delete(id);
+    const { error } = await supabase.from('player_profiles').delete().eq('id', id);
+    if (error) throw error;
+    return true;
   },
 };
 
 const ScoreEntry = {
   async list(orderBy = '-score', limit = 100) {
-    return await base44.entities.ScoreEntry.list(orderBy, limit);
+    const { column, ascending } = parseOrderBy(orderBy);
+    const { data, error } = await supabase
+      .from('score_entries')
+      .select('*')
+      .order(column, { ascending })
+      .limit(limit);
+    if (error) throw error;
+    return data || [];
   },
-  async filter(query) {
-    return await base44.entities.ScoreEntry.filter(query);
+
+  async filter(query = {}) {
+    const { data, error } = await applyFilters(
+      supabase.from('score_entries').select('*'),
+      query
+    );
+    if (error) throw error;
+    return data || [];
   },
+
   async create(scoreData) {
-    return await base44.entities.ScoreEntry.create(scoreData);
+    const { data, error } = await supabase
+      .from('score_entries')
+      .insert(scoreData)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
+
   async delete(id) {
-    return await base44.entities.ScoreEntry.delete(id);
+    const { error } = await supabase.from('score_entries').delete().eq('id', id);
+    if (error) throw error;
+    return true;
   },
 };
 
 const auth = {
   async me() {
-    try {
-      return await base44.auth.me();
-    } catch {
-      return null;
-    }
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return null;
+    return user;
   },
+
   async logout(redirectUrl) {
-    base44.auth.logout(redirectUrl || '/');
+    await supabase.auth.signOut();
+    if (redirectUrl) window.location.href = redirectUrl;
   },
-  async redirectToLogin(returnUrl) {
-    base44.auth.redirectToLogin(returnUrl);
+
+  redirectToLogin(returnUrl) {
+    const path = returnUrl || window.location.pathname;
+    window.location.href = `/login?return=${encodeURIComponent(path)}`;
   },
 };
 
 const functions = {
-  async invoke(functionName, params) {
+  async invoke(functionName, params = {}) {
     try {
-      const response = await base44.functions.invoke(functionName, params);
-      return { data: response.data, error: null };
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: params,
+      });
+      if (error) {
+        console.error(`Error invoking function ${functionName}:`, error);
+        return { data: null, error };
+      }
+      return { data, error: null };
     } catch (error) {
       console.error(`Error invoking function ${functionName}:`, error);
       return { data: null, error };

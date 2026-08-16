@@ -15,6 +15,10 @@ import Store from './pages/Store.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 
 const PersistentTabsLayout = () => {
   const navigate = useNavigate();
@@ -52,10 +56,11 @@ const GameRoute = () => {
   const levelId = Number(searchParams.get('level') || 0);
   const difficulty = searchParams.get('difficulty') || 'medium';
   const skin = searchParams.get('skin') || 'default';
+  const mode = searchParams.get('mode') || 'mission';
 
   return (
     <motion.div initial={{ x: 24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.2 }}>
-      <Game levelId={levelId} difficulty={difficulty} skin={skin} onMainMenu={() => navigate('/')} />
+      <Game levelId={levelId} difficulty={difficulty} skin={skin} mode={mode} onMainMenu={() => navigate('/')} />
     </motion.div>
   );
 };
@@ -68,6 +73,10 @@ const AppRoutes = () => {
       <Route path="/store" element={<PersistentTabsLayout />} />
       <Route path="/leaderboard" element={<PersistentTabsLayout />} />
       <Route path="/game" element={<GameRoute />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="*" element={<PageNotFound />} />

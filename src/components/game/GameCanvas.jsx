@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { GameEngine } from '../../game/gameEngine.js';
 
 
-export default function GameCanvas({ levelId, difficulty = 'medium', skin = 'default', onDetectionChange, onGasChange, onScoreChange,
+export default function GameCanvas({ levelId, difficulty = 'medium', skin = 'default', engineOptions = {}, onDetectionChange, onGasChange, onScoreChange, onComboChange,
   onLevelComplete, onGameOver, onObjectiveUpdate, activeGas, activeEye,
   engineRef, paused }) {
 
@@ -51,10 +51,11 @@ export default function GameCanvas({ levelId, difficulty = 'medium', skin = 'def
         return;
       }
 
-      engine = new GameEngine(canvas, levelId, difficulty, skin);
+      engine = new GameEngine(canvas, levelId, difficulty, skin, engineOptions);
       engine.onDetectionChange = onDetectionChange;
       engine.onGasChange = onGasChange;
       engine.onScoreChange = onScoreChange;
+      engine.onComboChange = onComboChange;
       engine.onLevelComplete = onLevelComplete;
       engine.onGameOver = onGameOver;
       engine.onObjectiveUpdate = onObjectiveUpdate;
