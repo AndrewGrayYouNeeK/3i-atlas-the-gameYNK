@@ -21,8 +21,13 @@ export default function Leaderboard({ onBack }) {
   useEffect(() => { loadScores(); }, []);
 
   const loadScores = async () => {
-    const all = await api.entities.ScoreEntry.list('-score', 100);
-    setScores(all || []);
+    try {
+      const all = await api.entities.ScoreEntry.list('-score', 100);
+      setScores(all || []);
+    } catch (err) {
+      console.warn('Leaderboard load failed:', err);
+      setScores([]);
+    }
   };
 
   const handleTouchStart = (e) => {

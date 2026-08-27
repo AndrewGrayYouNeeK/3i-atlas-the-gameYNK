@@ -66,20 +66,23 @@ npm install
 
 ### Database Setup
 
+This repo is wired to the **3i-atlas-the-game** project in the YouNeeK Supabase org
+(`https://exnifhwhlbbunjewzpng.supabase.co`). Tables `player_profiles` and `score_entries`
+are already provisioned with RLS.
+
+To use your own project instead:
+
 1. Go to [Supabase](https://supabase.com) and create a new project
 2. Go to SQL Editor and run the script in `supabase/schema.sql`
 3. Copy your project URL and anon key from Project Settings > API
 
 ### Environment Variables
 
-Create a `.env.local` file:
+Copy `.env.example` to `.env.local` (values for the YouNeeK project are included):
 
 ```bash
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+cp .env.example .env.local
 ```
-
-See `.env.example` for more details.
 
 ### Run Development Server
 

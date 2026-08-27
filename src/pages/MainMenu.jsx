@@ -69,19 +69,23 @@ export default function MainMenu({ onStartGame }) {
   useEffect(() => {
     api.auth.me().then(async (me) => {
       if (!me) return;
-      const profiles = await api.entities.PlayerProfile.filter({ user_email: me.email });
-      const profile = profiles?.[0];
-      if (profile) {
-        setOwnedSkins(profile.owned_skins || ['default']);
-        setSelectedSkin(profile.selected_skin || 'default');
-        setProfileId(profile.id);
+      try {
+        const profiles = await api.entities.PlayerProfile.filter({ user_email: me.email });
+        const profile = profiles?.[0];
+        if (profile) {
+          setOwnedSkins(profile.owned_skins || ['default']);
+          setSelectedSkin(profile.selected_skin || 'default');
+          setProfileId(profile.id);
+        }
+        const items = (profile?.achievements || []).map((id) => ({
+          id,
+          name: id === 'perfect_stealth' ? 'Perfect Stealth' : id === 'five_missions' ? 'Five Missions' : 'Top 10',
+          description: id === 'perfect_stealth' ? 'Finish a run under 5% detection.' : id === 'five_missions' ? 'Complete five missions.' : 'Reach the top 10 leaderboard.',
+        }));
+        setAchievements(items);
+      } catch (err) {
+        console.warn('Failed to load player profile:', err);
       }
-      const items = (profile?.achievements || []).map((id) => ({
-        id,
-        name: id === 'perfect_stealth' ? 'Perfect Stealth' : id === 'five_missions' ? 'Five Missions' : 'Top 10',
-        description: id === 'perfect_stealth' ? 'Finish a run under 5% detection.' : id === 'five_missions' ? 'Complete five missions.' : 'Reach the top 10 leaderboard.',
-      }));
-      setAchievements(items);
     });
 
     const canvas = canvasRef.current;
