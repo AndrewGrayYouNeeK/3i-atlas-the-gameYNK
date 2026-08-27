@@ -94,15 +94,43 @@ The app will be available at `http://localhost:5173`
 
 ## Deploying to Production
 
-### Frontend Deployment
+The domain **[3iatlasgame.xyz](https://3iatlasgame.xyz)** is already on Cloudflare, but it currently still points at the old Base44 app (unavailable / HTTP 402). Host this Vite build on **Cloudflare Pages** and attach that domain so it replaces Base44.
 
-This app can be deployed to any static hosting service:
+### 1. Create a Cloudflare Pages project
 
-- **Vercel**: `vercel --prod`
-- **Netlify**: `netlify deploy --prod`
-- **GitHub Pages**: `npm run build` then deploy the `dist/` folder
+1. Open [Cloudflare Dashboard → Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages)
+2. **Create** → **Pages** → **Connect to Git** → this GitHub repo
+3. Build settings:
+   - Framework preset: Vite
+   - Build command: `npm run build`
+   - Build output directory: `dist`
+   - Node version: `20`
+4. Environment variables (Production):
 
-Make sure to set your environment variables in the hosting platform's dashboard.
+```
+VITE_SUPABASE_URL=https://exnifhwhlbbunjewzpng.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon key from .env.example>
+```
+
+5. Save and deploy. You will get a `*.pages.dev` URL first — confirm the game loads there.
+
+### 2. Attach 3iatlasgame.xyz
+
+1. In the Pages project: **Custom domains** → **Set up a custom domain**
+2. Add `3iatlasgame.xyz` and `www.3iatlasgame.xyz`
+3. Cloudflare will offer to **replace the existing DNS records** that currently send traffic to Base44. Accept that.
+4. Wait for SSL to become Active (usually a few minutes).
+
+Leave the orange-cloud proxy on. Do not point the domain at GitHub Pages or Vercel while it is on this Cloudflare zone unless you change those records yourself.
+
+### 3. Allow the domain in Supabase Auth
+
+In [Authentication → URL Configuration](https://supabase.com/dashboard/project/exnifhwhlbbunjewzpng/auth/url-configuration):
+
+- Site URL: `https://3iatlasgame.xyz`
+- Redirect URLs: `https://3iatlasgame.xyz/**` and `https://www.3iatlasgame.xyz/**`
+
+Without this, email confirmation and OAuth return links stay on localhost.
 
 ### Edge Functions Deployment
 
