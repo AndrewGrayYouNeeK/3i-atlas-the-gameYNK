@@ -21,7 +21,10 @@ const PlayerProfile = {
       supabase.from('player_profiles').select('*'),
       query
     );
-    if (error) throw error;
+    if (error) {
+      console.warn('PlayerProfile.filter failed:', error.message);
+      return [];
+    }
     return data || [];
   },
 
@@ -66,7 +69,10 @@ const ScoreEntry = {
       .select('*')
       .order(column, { ascending })
       .limit(limit);
-    if (error) throw error;
+    if (error) {
+      console.warn('ScoreEntry.list failed:', error.message);
+      return [];
+    }
     return data || [];
   },
 
@@ -75,7 +81,10 @@ const ScoreEntry = {
       supabase.from('score_entries').select('*'),
       query
     );
-    if (error) throw error;
+    if (error) {
+      console.warn('ScoreEntry.filter failed:', error.message);
+      return [];
+    }
     return data || [];
   },
 
