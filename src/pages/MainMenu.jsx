@@ -41,6 +41,12 @@ const TUTORIAL_STEPS = [
     tip: 'Stay safe — the bar never forgives',
   },
   {
+    icon: '🌑',
+    title: 'Planet Shadow',
+    desc: 'Scanners cannot see through planets or moons. Hard mode is a long infiltration: wait for scan gaps, drift, and hit the HIDE markers in cover before the exit opens.',
+    tip: 'Bursting on Hard lights you up. Shadow + slow drift is the strategy.',
+  },
+  {
     icon: '🎯',
     title: 'Objectives',
     desc: 'Complete all mission waypoints per level. Staying below 5% detection unlocks secret Atlas lore.',

@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Eye } from 'lucide-react';
 
-export default function DetectionHUD({ detection, score, level, comboMultiplier = 1 }) {
+export default function DetectionHUD({ detection, score, level, comboMultiplier = 1, inShadow = false }) {
   const safe = detection < 5;
   const low = detection < 20;
   const med = detection >= 20 && detection < 60;
@@ -39,9 +39,9 @@ export default function DetectionHUD({ detection, score, level, comboMultiplier 
             initial={{ opacity: 0.4 }}
             animate={{ opacity: 1 }}
             className="font-orbitron text-[12px] font-bold tracking-widest"
-            style={{ color: statusColor }}
+            style={{ color: inShadow ? '#a78bfa' : statusColor }}
           >
-            {statusText}
+            {inShadow ? 'IN SHADOW' : statusText}
           </motion.div>
         </div>
 

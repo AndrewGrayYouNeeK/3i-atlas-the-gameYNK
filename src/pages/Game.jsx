@@ -30,6 +30,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
     setLevelId(initialLevel);
     setScore(0);
     setDetection(0);
+    setInShadow(false);
     setObjectives([]);
     setActiveGas(null);
     setPostRunStats(null);
@@ -39,6 +40,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
   }, [initialLevel, difficulty]);
   const [gameKey, setGameKey] = useState(0);
   const [detection, setDetection] = useState(0);
+  const [inShadow, setInShadow] = useState(false);
   const [score, setScore] = useState(0);
   const [totalScore, setTotalScore] = useState(totalScoreRef?.current || 0);
   const [objectives, setObjectives] = useState([]);
@@ -73,6 +75,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
       setSpeed(eng.atlas?.speed || 2);
       setActiveEye(eng.atlas?.eyeMode || null);
       setMythCooldown(eng.mythCooldown || 0);
+      setInShadow(Boolean(eng.inShadow));
     }, 100);
     return () => clearInterval(interval);
   }, [gameKey]);
@@ -229,7 +232,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
             exit={{ opacity: 0 }}
             className="absolute inset-0 pointer-events-none"
           >
-            <DetectionHUD detection={detection} score={score} level={levelId} comboMultiplier={comboMultiplier} />
+            <DetectionHUD detection={detection} score={score} level={levelId} comboMultiplier={comboMultiplier} inShadow={inShadow} />
             <ObjectivesPanel objectives={objectives} levelName={LEVELS[levelId]?.name} />
             <div className="pointer-events-auto">
               <GasSelector activeGas={activeGas} cooldowns={gasCooldowns} charges={gasCharges} onActivate={activateGas} />
