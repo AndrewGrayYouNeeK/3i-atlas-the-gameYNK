@@ -94,15 +94,50 @@ The app will be available at `http://localhost:5173`
 
 ## Deploying to Production
 
-### Frontend Deployment
+**Current status (checked 29 Aug 2026):** `https://3iatlasgame.xyz` is on Cloudflare, but it is **not serving this game yet**.
 
-This app can be deployed to any static hosting service:
+- There is **no** `*.pages.dev` site for this repo (Cloudflare Pages was never created).
+- The apex hostname returns a Cloudflare **managed challenge** (`403`, “Just a moment…” / `cf-mitigated: challenge`) — Security Level is likely **I’m Under Attack** or Bot Fight is on.
+- `www.3iatlasgame.xyz` **does not exist** in DNS.
 
-- **Vercel**: `vercel --prod`
-- **Netlify**: `netlify deploy --prod`
-- **GitHub Pages**: `npm run build` then deploy the `dist/` folder
+The game will not appear on that domain until a host is actually deployed **and** the zone’s DNS/custom-domain record points at it.
 
-Make sure to set your environment variables in the hosting platform's dashboard.
+### Option A — Cloudflare Pages (best, domain already on Cloudflare)
+
+1. Cloudflare dashboard → **Security** → **Settings** → set Security Level to **Medium** (not “I’m Under Attack”). Save.
+2. [Workers & Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages) → **Create** → **Pages** → **Connect to Git** → `AndrewGrayYouNeeK/3i-atlas-the-gameYNK`.
+3. Build: command `npm run build`, output `dist`, Node `20`.
+4. Add env vars `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from `.env.example`.
+5. Deploy and open the `*.pages.dev` URL first. If that URL does not load the game, the custom domain cannot work either.
+6. **Custom domains** → add `3iatlasgame.xyz`. When Cloudflare asks to **replace existing DNS** (the old Base44 target), confirm.
+7. Add `www.3iatlasgame.xyz` the same way (this record does not exist today).
+
+If “add custom domain” fails because a CNAME/A record is already used: **DNS** → delete the old A/CNAME/Base44 records for `@` and `www`, then attach the domain again.
+
+### Option B — GitHub Pages (this repo)
+
+Merging to `main` runs `.github/workflows/deploy-github-pages.yml`. Then:
+
+1. GitHub repo → **Settings** → **Pages** → Source **GitHub Actions**.
+2. Custom domain: `3iatlasgame.xyz` (the `CNAME` file is in `public/`).
+3. In Cloudflare **DNS**, replace the apex records with GitHub Pages IPs, **DNS only** (grey cloud, not proxied):
+
+```
+A     @     185.199.108.153
+A     @     185.199.109.153
+A     @     185.199.110.153
+A     @     185.199.111.153
+CNAME www   AndrewGrayYouNeeK.github.io
+```
+
+Do not orange-cloud GitHub Pages unless SSL mode is Full and “I’m Under Attack” is off.
+
+### Supabase Auth
+
+[URL configuration](https://supabase.com/dashboard/project/exnifhwhlbbunjewzpng/auth/url-configuration):
+
+- Site URL: `https://3iatlasgame.xyz`
+- Redirect URLs: `https://3iatlasgame.xyz/**`
 
 ### Edge Functions Deployment
 

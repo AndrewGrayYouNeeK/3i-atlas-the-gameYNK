@@ -1,0 +1,8 @@
+{
+  "name": "3i-Atlas — The Game",
+  "short_name": "3i-Atlas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#01010c",
+  "theme_color": "#01010c"
+}

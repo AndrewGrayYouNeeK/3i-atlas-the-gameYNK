@@ -1,0 +1,5 @@
+# Cloudflare Pages project for Atlas — The Game
+# Custom domain: 3iatlasgame.xyz (zone already on Cloudflare)
+name = "3i-atlas-the-game"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-08-27"
