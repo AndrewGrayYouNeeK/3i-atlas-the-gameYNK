@@ -21,9 +21,15 @@ export default function PauseMenu({ onResume, onRestart, onMainMenu }) {
         <div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg, #7c3aed, #5b21b6)' }} />
 
         <div className="p-7 text-center">
-          {/* Comet orb */}
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full"
-            style={{ background: 'radial-gradient(circle at 35% 35%, #c8ddff, #7733bb, #1a0033)', boxShadow: '0 0 20px rgba(150,100,255,0.5)' }} />
+          <img
+            src="/logo.webp"
+            alt="3i-Atlas"
+            className="w-14 h-14 mx-auto mb-4 rounded-full object-cover"
+            style={{
+              mixBlendMode: 'screen',
+              filter: 'drop-shadow(0 0 16px rgba(140,80,255,0.7))',
+            }}
+          />
 
           <div className="font-orbitron text-[9px] text-violet-400/60 tracking-[0.35em] mb-1">PAUSED</div>
           <h2 className="font-orbitron text-2xl font-bold text-white mb-6"
