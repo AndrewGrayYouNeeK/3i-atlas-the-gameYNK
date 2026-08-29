@@ -102,9 +102,10 @@ export class GameEngine {
     this.prevDetection = 0;
     this.screenShake = 0;
     this.solarWind = this._getSolarWind();
+    this.inShadow = false;
 
     // World — wider than the viewport; a scrolling camera follows Atlas
-    this.worldWidth = canvas.width * 3.5;
+    this.worldWidth = canvas.width * 3.5 * (this.difficulty.worldLengthMult || 1);
     this.worldHeight = canvas.height;
     this.camera = { x: 0, y: 0 };
 
@@ -115,7 +116,7 @@ export class GameEngine {
     this.gravityWells = this._generateGravityWells();
     this.destination = this._generateDestination();
     this.threats = this._generateThreats();
-    this.objectives = [];
+    this.objectives = this._generateStealthObjectives();
     this.gasParticles = [];
     this.dustParticles = [];
     this.wormholeAngle = 0;
@@ -224,7 +225,7 @@ export class GameEngine {
     // Secondary body — a small moon for a mid-journey slingshot
     const moonR = 11 + Math.random() * 4;
     wells.push({
-      x: W * 0.62 + (Math.random() - 0.5) * W * 0.05,
+      x: W * (this.difficulty.id === 'hard' ? 0.52 : 0.62) + (Math.random() - 0.5) * W * 0.05,
       y: H * 0.4 + (Math.random() - 0.5) * H * 0.35,
       radius: moonR,
       influenceRadius: moonR * 5 + 40,
@@ -236,6 +237,23 @@ export class GameEngine {
       angle: 0,
       isSun: false,
     });
+
+    if (this.difficulty.id === 'hard') {
+      const rockR = 14;
+      wells.push({
+        x: W * 0.78 + (Math.random() - 0.5) * W * 0.04,
+        y: H * 0.62 + (Math.random() - 0.5) * H * 0.18,
+        radius: rockR,
+        influenceRadius: rockR * 5 + 36,
+        strength: 0.55,
+        color: '#6b5c4a',
+        name: 'Dark Rock',
+        def: { name: 'Dark Rock', color: '#6b5c4a', radius: rockR, type: 'scorched', ringCount: 0 },
+        ringCount: 0,
+        angle: 0,
+        isSun: false,
+      });
+    }
 
     return wells;
   }
@@ -281,7 +299,7 @@ export class GameEngine {
       anchorPool.push({ x: (a.x + b.x) / 2 + (Math.random() - 0.5) * 80, y: 80 + Math.random() * (H - 160) });
     }
     // Open-space anchors spread across the full journey
-    const spreadCount = 6;
+    const spreadCount = this.difficulty.id === 'hard' ? 11 : 6;
     for (let i = 1; i <= spreadCount; i++) {
       anchorPool.push({ x: (W * i) / (spreadCount + 1), y: 80 + Math.random() * (H - 160) });
     }
@@ -343,17 +361,21 @@ export class GameEngine {
         const anchor = anchorPool.length > 0
           ? anchorPool[anchorIdx++ % anchorPool.length]
           : { x: 120 + Math.random() * (W - 240), y: 80 + Math.random() * (H - 160) };
-        const spread = 80;
+        const spread = this.difficulty.id === 'hard' ? 48 : 80;
         const px = Math.max(60, Math.min(W - 60, anchor.x + (Math.random() - 0.5) * spread));
         const py = Math.max(60, Math.min(H - 60, anchor.y + (Math.random() - 0.5) * spread));
-        // Patrol waypoints
+        // Local patrol loops so you can read the gap and wait — not random teleports across the map
         const waypointCount = c.patrol === 'orbit' ? 1 : 3;
-        const waypoints = Array.from({ length: waypointCount }, () => ({
-          x: 100 + Math.random() * (W - 200),
-          y: 80 + Math.random() * (H - 160),
-        }));
-        // Scale scan radius with difficulty: easy=0.7x, medium=1.0x, hard=1.3x
-        const scanRadiusMult = (this.difficulty.id === 'easy' ? 0.7 : this.difficulty.id === 'hard' ? 1.3 : 1.0) * this.scanMult;
+        const loopR = this.difficulty.id === 'hard' ? 70 + Math.random() * 40 : 90 + Math.random() * 50;
+        const waypoints = Array.from({ length: waypointCount }, (_, w) => {
+          const ang = (w / waypointCount) * Math.PI * 2 + Math.random() * 0.4;
+          return {
+            x: Math.max(60, Math.min(W - 60, px + Math.cos(ang) * loopR)),
+            y: Math.max(50, Math.min(H - 50, py + Math.sin(ang) * loopR * 0.65)),
+          };
+        });
+        // Scale scan radius with difficulty: easy=0.7x, medium=1.0x, hard=1.15x (coverage, not sniper-speed)
+        const scanRadiusMult = (this.difficulty.id === 'easy' ? 0.7 : this.difficulty.id === 'hard' ? 1.15 : 1.0) * this.scanMult;
         threats.push({
           id: id++, type, ...c,
           scanRadius: c.scanRadius * scanRadiusMult,
@@ -374,6 +396,9 @@ export class GameEngine {
     };
 
     Object.entries(cfg).forEach(([type, count]) => add(type, count));
+    if (this.difficulty.id === 'hard') {
+      add('probe', 2 + Math.floor(this.levelId / 3));
+    }
     if (this.threatBonus > 0) {
       const types = Object.keys(cfg).filter((k) => cfg[k] > 0);
       for (let i = 0; i < this.threatBonus; i++) {
@@ -385,7 +410,7 @@ export class GameEngine {
 
   _generateCollectibles() {
     const W = this.worldWidth, H = this.worldHeight;
-    const count = 4 + Math.floor(this.levelId / 2);
+    const count = (4 + Math.floor(this.levelId / 2)) * (this.difficulty.id === 'hard' ? 2 : 1);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       x: W * (0.15 + (i + 1) / (count + 2) * 0.65) + (Math.random() - 0.5) * 60,
@@ -397,12 +422,82 @@ export class GameEngine {
     }));
   }
 
+  _generateStealthObjectives() {
+    if (this.difficulty.id !== 'hard') return [];
+    const W = this.worldWidth;
+    const planet = this.gravityWells[0];
+    const moon = this.gravityWells[1];
+    const rock = this.gravityWells[2];
+    const dest = this.destination;
+    const marks = [];
+    if (planet) {
+      marks.push({
+        id: 'shadow',
+        x: Math.min(W - 80, planet.x + planet.radius + 42),
+        y: planet.y,
+        radius: 24,
+        done: false,
+        pulseT: 0,
+        text: 'Thread the planet’s shadow',
+      });
+    }
+    if (moon) {
+      marks.push({
+        id: 'moon',
+        x: moon.x,
+        y: Math.max(48, moon.y - moon.radius - 38),
+        radius: 22,
+        done: false,
+        pulseT: 0,
+        text: 'Slip the moon blind side',
+      });
+    }
+    if (rock) {
+      marks.push({
+        id: 'rock',
+        x: rock.x - rock.radius - 36,
+        y: rock.y,
+        radius: 22,
+        done: false,
+        pulseT: 0,
+        text: 'Hide behind the dark rock',
+      });
+    } else if (dest) {
+      marks.push({
+        id: 'coast',
+        x: dest.x - Math.min(240, W * 0.1),
+        y: dest.y,
+        radius: 22,
+        done: false,
+        pulseT: 0,
+        text: 'Coast the last lane — no burst',
+      });
+    }
+    return marks;
+  }
+
+  _lineHitsBody(x1, y1, x2, y2) {
+    for (const gw of this.gravityWells) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len2 = dx * dx + dy * dy;
+      if (len2 < 1) continue;
+      const t = Math.max(0, Math.min(1, ((gw.x - x1) * dx + (gw.y - y1) * dy) / len2));
+      const px = x1 + t * dx;
+      const py = y1 + t * dy;
+      const hitR = gw.radius + 6;
+      if ((px - gw.x) ** 2 + (py - gw.y) ** 2 < hitR * hitR) return true;
+    }
+    return false;
+  }
+
   // ─── LIFECYCLE ─────────────────────────────────────────────────────────────
 
   start() {
     this.running = true;
     this.lastTime = performance.now();
     this.levelFlash = 1.8; // trigger level-start flash
+    if (this.onObjectiveUpdate) this.onObjectiveUpdate(this.objectives);
     this._loop(this.lastTime);
   }
   stop() { this.running = false; if (this.animFrame) cancelAnimationFrame(this.animFrame); }
@@ -608,10 +703,10 @@ export class GameEngine {
       const dx = atlas.x - threat.x;
       const dy = atlas.y - threat.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const memBuild = this.difficulty.id === 'easy' ? 0.75 : this.difficulty.id === 'hard' ? 3.5 : 2.5;
-      const memDecay = this.difficulty.id === 'easy' ? 2.4 : this.difficulty.id === 'hard' ? 0.4 : 0.8;
-      const memDecayOob = this.difficulty.id === 'easy' ? 1.8 : this.difficulty.id === 'hard' ? 0.25 : 0.5;
-      const alertThresh = this.difficulty.id === 'easy' ? 3.2 : this.difficulty.id === 'hard' ? 1.0 : 1.5;
+      const memBuild = this.difficulty.id === 'easy' ? 0.75 : this.difficulty.id === 'hard' ? 2.1 : 2.5;
+      const memDecay = this.difficulty.id === 'easy' ? 2.4 : this.difficulty.id === 'hard' ? 0.7 : 0.8;
+      const memDecayOob = this.difficulty.id === 'easy' ? 1.8 : this.difficulty.id === 'hard' ? 0.45 : 0.5;
+      const alertThresh = this.difficulty.id === 'easy' ? 3.2 : this.difficulty.id === 'hard' ? 1.35 : 1.5;
 
       if (dist < threat.scanRadius) {
         const angleToAtlas = Math.atan2(dy, dx);
@@ -619,6 +714,7 @@ export class GameEngine {
         const inArc = threat.scanArc >= Math.PI * 1.9 || angleDiff < threat.scanArc / 2;
 
         let detected = inArc;
+        if (detected && this._lineHitsBody(threat.x, threat.y, atlas.x, atlas.y)) detected = false;
         // Gas countermeasures
         if (this.gasActive === 'ammonia' && threat.detects.includes('radar')) detected = false;
         if (this.gasActive === 'methane' && threat.detects.includes('visual')) detected = false;
@@ -654,7 +750,7 @@ export class GameEngine {
           const dx = t1.x - t2.x;
           const dy = t1.y - t2.y;
           const spreadR = this.difficulty.id === 'easy' ? PHYSICS.ALERT_SPREAD_RADIUS * 0.3
-                       : this.difficulty.id === 'hard' ? PHYSICS.ALERT_SPREAD_RADIUS * 1.4
+                       : this.difficulty.id === 'hard' ? PHYSICS.ALERT_SPREAD_RADIUS * 0.95
                        : PHYSICS.ALERT_SPREAD_RADIUS;
           if (Math.sqrt(dx * dx + dy * dy) < spreadR) {
             t2.alerted = true;
@@ -712,6 +808,11 @@ export class GameEngine {
     const speedRatio = vel / (PHYSICS.BURST_SPEED * 0.5);
     rate += speedRatio * PHYSICS.SPEED_DETECTION_MULTIPLIER;
 
+    this.inShadow = this.threats.some((threat) => {
+      const dist = Math.hypot(this.atlas.x - threat.x, this.atlas.y - threat.y);
+      return dist < threat.scanRadius && this._lineHitsBody(threat.x, threat.y, this.atlas.x, this.atlas.y);
+    });
+
     for (const threat of this.threats) {
       if (threat.alerted) {
         const dx = this.atlas.x - threat.x;
@@ -732,14 +833,18 @@ export class GameEngine {
 
     if (this.gasActive === 'methane') rate *= 0.15;
     if (this.atlas.mythActive) rate = 0;
+    if (this.inShadow) rate *= 0.2;
 
     // Level + difficulty multiplier
-    // Cap the level escalation so late levels stay completable on hard
     const levelScale = this.difficulty.id === 'easy' ? (1 + this.levelId * 0.08)
-                     : this.difficulty.id === 'hard' ? (1 + this.levelId * 0.25)
+                     : this.difficulty.id === 'hard' ? (1 + this.levelId * 0.18)
                      : (1 + this.levelId * 0.35);
     const diffMult = levelScale * this.difficulty.detectionMult;
-    const decayBonus = this.difficulty.id === 'easy' ? 0.16 : this.difficulty.id === 'hard' ? 0.03 : 0.08;
+    let decayBonus = this.difficulty.id === 'easy' ? 0.16 : this.difficulty.id === 'hard' ? 0.05 : 0.08;
+    if (this.difficulty.id === 'hard') {
+      if (speedRatio < 0.32) decayBonus += 0.14;
+      if (speedRatio > 1.05) rate *= 1.55;
+    }
     const delta = (rate * diffMult - (PHYSICS.DETECTION_DECAY + decayBonus)) * dt * 18;
     this.detection = Math.max(0, Math.min(100, this.detection + delta));
     const spike = this.detection - before;
@@ -823,8 +928,9 @@ export class GameEngine {
 
     // Win: reach the gravitational anchor destination
     const dest = this.destination;
-    const dx = this.atlas.x - dest.x;
-    const dy = this.atlas.y - dest.y;
+    if (this.difficulty.id === 'hard' && this.objectives.some((o) => !o.done)) return;
+    const dx = dest.x - this.atlas.x;
+    const dy = dest.y - this.atlas.y;
     if (Math.sqrt(dx * dx + dy * dy) < dest.captureRadius) {
       this.levelComplete = true;
       const stealthBonus = Math.round((1 - this.detection / 100) * 5000);
@@ -890,6 +996,7 @@ export class GameEngine {
     this._drawGravityWells(ctx, t);
     this._drawThreats(ctx, t);
     this._drawCollectibles(ctx, t);
+    this._drawStealthObjectives(ctx, t);
     this._drawGasParticles(ctx);
     this._drawDustParticles(ctx);
     this._drawCometTail(ctx, t);
@@ -1663,6 +1770,34 @@ export class GameEngine {
     }
   }
 
+  _drawStealthObjectives(ctx, t) {
+    for (const obj of this.objectives) {
+      if (obj.done) continue;
+      const pulse = 0.55 + 0.45 * Math.sin((obj.pulseT || 0) + t * 0.004);
+      ctx.save();
+      ctx.translate(obj.x, obj.y);
+      ctx.strokeStyle = `rgba(160,120,255,${0.35 + pulse * 0.4})`;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.arc(0, 0, obj.radius + 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, obj.radius);
+      g.addColorStop(0, `rgba(180,140,255,${pulse * 0.55})`);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, obj.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(220,200,255,${0.7 + pulse * 0.3})`;
+      ctx.font = '8px Orbitron, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('HIDE', 0, 3);
+      ctx.restore();
+    }
+  }
+
   _drawGasParticles(ctx) {
     for (const p of this.gasParticles) {
       ctx.beginPath();
@@ -2099,13 +2234,14 @@ export class GameEngine {
   resize(width, height) {
     this.canvas.width = width;
     this.canvas.height = height;
-    this.worldWidth = width * 3.5;
+    this.worldWidth = width * 3.5 * (this.difficulty.worldLengthMult || 1);
     this.worldHeight = height;
     this.camera.x = Math.max(0, Math.min(this.worldWidth - width, this.atlas.x - width / 2));
     this.stars = this._generateStars(500);
     this.nebulaDust = this._generateNebulaDust(80);
     this.gravityWells = this._generateGravityWells();
     this.destination = this._generateDestination();
-    this.objectives = [];
+    this.objectives = this._generateStealthObjectives();
+    if (this.onObjectiveUpdate) this.onObjectiveUpdate(this.objectives);
   }
 }

@@ -275,7 +275,7 @@ export const PHYSICS = {
 };
 
 export const DIFFICULTIES = {
-  easy: { id: 'easy', label: 'EASY', color: '#34d399', borderColor: 'rgba(52,211,153,0.5)', bg: 'rgba(52,211,153,0.1)', glow: 'rgba(52,211,153,0.3)', speedMult: 0.55, threatSpeedMult: 0.45, detectionMult: 0.3, description: 'Slow & serene. 5 gas charges. Short scan range. Perfect for new pilots.' },
-  medium: { id: 'medium', label: 'MEDIUM', color: '#fbbf24', borderColor: 'rgba(251,191,36,0.5)', bg: 'rgba(251,191,36,0.1)', glow: 'rgba(251,191,36,0.3)', speedMult: 1.0, threatSpeedMult: 1.0, detectionMult: 1.0, description: 'Balanced pace. 3 gas charges. The intended experience.' },
-  hard: { id: 'hard', label: 'HARD', color: '#f87171', borderColor: 'rgba(248,113,113,0.5)', bg: 'rgba(248,113,113,0.1)', glow: 'rgba(248,113,113,0.3)', speedMult: 1.6, threatSpeedMult: 1.6, detectionMult: 1.5, description: 'Fast & brutal. 2 gas charges. Wide scan range. No room for error.' },
+  easy: { id: 'easy', label: 'EASY', color: '#34d399', borderColor: 'rgba(52,211,153,0.5)', bg: 'rgba(52,211,153,0.1)', glow: 'rgba(52,211,153,0.3)', speedMult: 0.55, threatSpeedMult: 0.45, detectionMult: 0.3, worldLengthMult: 0.9, description: 'Slow & serene. 5 gas charges. Short scan range. Perfect for new pilots.' },
+  medium: { id: 'medium', label: 'MEDIUM', color: '#fbbf24', borderColor: 'rgba(251,191,36,0.5)', bg: 'rgba(251,191,36,0.1)', glow: 'rgba(251,191,36,0.3)', speedMult: 1.0, threatSpeedMult: 1.0, detectionMult: 1.0, worldLengthMult: 1.0, description: 'Balanced pace. 3 gas charges. The intended experience.' },
+  hard: { id: 'hard', label: 'HARD', color: '#f87171', borderColor: 'rgba(248,113,113,0.5)', bg: 'rgba(248,113,113,0.1)', glow: 'rgba(248,113,113,0.3)', speedMult: 1.0, threatSpeedMult: 0.72, detectionMult: 1.2, worldLengthMult: 1.9, description: 'Long stealth run. Hide in planet shadow, wait for scan gaps, drift. Bursting is suicide.' },
 };
