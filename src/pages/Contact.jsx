@@ -43,7 +43,7 @@ export default function Contact() {
             </a>
 
             <a
-              href="https://github.com/AndrewGrayYouNeeK/3i-atlas-the-game"
+              href="https://github.com/AndrewGrayYouNeeK/3i-atlas-the-gameYNK"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-white/4 hover:border-sky-500/40 hover:bg-sky-900/20 transition-all group"
@@ -53,7 +53,7 @@ export default function Contact() {
               </div>
               <div>
                 <div className="font-orbitron text-xs text-white/80 group-hover:text-white transition-colors">GITHUB</div>
-                <div className="text-sm text-sky-300 mt-0.5">AndrewGrayYouNeeK / 3i-atlas-the-game</div>
+                <div className="text-sm text-sky-300 mt-0.5">AndrewGrayYouNeeK / 3i-atlas-the-gameYNK</div>
               </div>
             </a>
 

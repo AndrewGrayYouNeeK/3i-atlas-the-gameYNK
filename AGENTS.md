@@ -29,3 +29,7 @@ play the game.
   and is intentionally not part of `lint` or `build`; a clean build does not require it.
 - There is no test runner configured (`npm test` does not exist) and no local Supabase
   stack (`supabase/schema.sql` + hosted Edge Functions are for a cloud Supabase project).
+- Production domain is `https://3iatlasgame.xyz`. Deploy with
+  `npm run deploy:cloudflare` when `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN`
+  are set (see `scripts/deploy-cloudflare-pages.mjs`). The apex may still return a
+  Cloudflare managed challenge until Security Level is Medium / Bot Fight is off.
