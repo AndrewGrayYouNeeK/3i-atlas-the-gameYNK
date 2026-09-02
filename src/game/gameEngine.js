@@ -1129,13 +1129,13 @@ export class GameEngine {
     const mode = this.level.earthBackdrop;
     if (!mode || mode === 'none') return;
 
-    const sizes = { distant: Math.min(W, H) * 0.16, close: Math.min(W, H) * 0.28, receding: Math.min(W, H) * 0.12, watching: Math.min(W, H) * 0.38 };
-    const R = sizes[mode] || Math.min(W, H) * 0.22;
+    const sizes = { distant: Math.min(W, H) * 0.14, close: Math.min(W, H) * 0.24, receding: Math.min(W, H) * 0.11, watching: Math.min(W, H) * 0.28 };
+    const R = sizes[mode] || Math.min(W, H) * 0.2;
     const pos = {
       distant: { x: W * 0.88, y: H * 0.78 },
       close: { x: W * 0.84, y: H * 0.72 },
       receding: { x: W * 0.10, y: H * 0.74 },
-      watching: { x: W * 0.90, y: H * 0.62 },
+      watching: { x: W * 0.88, y: H * 0.58 },
     }[mode] || { x: W * 0.88, y: H * 0.7 };
 
     const spin = t * 0.00008;
@@ -1236,13 +1236,14 @@ export class GameEngine {
       ctx.arc(0, 0, R * 1.42, Math.PI * 0.15, Math.PI * 0.85);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = `rgba(180,220,255,${0.45 + watchPulse * 0.25})`;
+      ctx.fillStyle = `rgba(180,220,255,${0.5 + watchPulse * 0.25})`;
       ctx.font = 'bold 9px Orbitron, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('EARTH', 0, R + 18);
-      ctx.fillStyle = `rgba(255,180,80,${0.55 + watchPulse * 0.3})`;
+      // Keep labels above the limb so they stay on-screen
+      ctx.fillText('EARTH', 0, -R - 22);
+      ctx.fillStyle = `rgba(255,180,80,${0.6 + watchPulse * 0.3})`;
       ctx.font = '8px Orbitron, monospace';
-      ctx.fillText('WATCHING', 0, R + 30);
+      ctx.fillText('WATCHING', 0, -R - 10);
     } else if (mode === 'receding') {
       ctx.fillStyle = 'rgba(180,210,255,0.45)';
       ctx.font = 'bold 8px Orbitron, monospace';
