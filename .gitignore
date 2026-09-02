@@ -30,3 +30,6 @@ dist-ssr
 
 .env
 .vite
+
+# local cloud credentials
+.cursor/cloudflare.env
