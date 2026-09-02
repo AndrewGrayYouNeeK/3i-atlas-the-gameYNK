@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Play, Home, RotateCcw } from 'lucide-react';
 
-export default function PauseMenu({ onResume, onRestart, onMainMenu }) {
+export default function PauseMenu({ onResume, onRestart, onMainMenu, craft }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -34,7 +34,7 @@ export default function PauseMenu({ onResume, onRestart, onMainMenu }) {
           <div className="font-orbitron text-[9px] text-violet-400/60 tracking-[0.35em] mb-1">PAUSED</div>
           <h2 className="font-orbitron text-2xl font-bold text-white mb-6"
             style={{ textShadow: '0 0 20px rgba(160,80,255,0.5)' }}>
-            ATLAS AT REST
+            {craft?.id === 'oumuamua' ? 'SCOUT AT REST' : 'ATLAS AT REST'}
           </h2>
 
           <div className="space-y-2">

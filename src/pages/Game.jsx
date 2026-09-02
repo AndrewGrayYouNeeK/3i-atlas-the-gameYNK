@@ -11,7 +11,8 @@ import GameOverScreen from '../components/game/GameOverScreen.jsx';
 import EndgameScreen from '../components/game/EndgameScreen.jsx';
 import PostRunStatsScreen from '../components/game/PostRunStatsScreen.jsx';
 import PauseMenu from '../components/game/PauseMenu.jsx';
-import { LEVELS } from '../game/constants.js';
+import DispatchScreen from '../components/game/DispatchScreen.jsx';
+import { LEVELS, getCraft, isHandoffLevel } from '../game/constants.js';
 import { getDailyChallenge } from '../game/dailyChallenge.js';
 import { api } from '@/api/supabaseApi';
 
@@ -52,7 +53,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
   const [speed, setSpeed] = useState(2);
   const [paused, setPaused] = useState(false);
   const [comboMultiplier, setComboMultiplier] = useState(1);
-  const [state, setState] = useState('playing'); // playing | level_complete | game_over | endgame
+  const [state, setState] = useState('playing'); // playing | level_complete | game_over | endgame | dispatch
 
   const engineRef = useRef(null);
 
@@ -168,6 +169,10 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
       setState('endgame');
       return;
     }
+    if (isHandoffLevel(levelId)) {
+      setState('dispatch');
+      return;
+    }
     const next = levelId + 1;
     setTotalScore(ts => ts + score);
     setLevelId(next);
@@ -175,6 +180,22 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
     setDetection(0);
     setObjectives([]);
     setActiveGas(null);
+    setPostRunStats(null);
+    setPaused(false);
+    setState('playing');
+    setGameKey(k => k + 1);
+  };
+
+  const handleDispatchContinue = () => {
+    const next = levelId + 1;
+    setTotalScore(ts => ts + score);
+    setLevelId(next);
+    setScore(0);
+    setDetection(0);
+    setObjectives([]);
+    setActiveGas(null);
+    setPostRunStats(null);
+    setPaused(false);
     setState('playing');
     setGameKey(k => k + 1);
   };
@@ -232,7 +253,15 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
             exit={{ opacity: 0 }}
             className="absolute inset-0 pointer-events-none"
           >
-            <DetectionHUD detection={detection} score={score} level={levelId} comboMultiplier={comboMultiplier} inShadow={inShadow} />
+            <DetectionHUD
+              detection={detection}
+              score={score}
+              level={levelId}
+              comboMultiplier={comboMultiplier}
+              inShadow={inShadow}
+              craft={getCraft(LEVELS[levelId])}
+              earthWatching={LEVELS[levelId]?.earthBackdrop === 'watching'}
+            />
             <ObjectivesPanel objectives={objectives} levelName={LEVELS[levelId]?.name} />
             <div className="pointer-events-auto">
               <GasSelector activeGas={activeGas} cooldowns={gasCooldowns} charges={gasCharges} onActivate={activateGas} />
@@ -256,7 +285,10 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl backdrop-blur-md pointer-events-auto"
                 style={{ background: 'rgba(5,5,18,0.72)', border: '1px solid rgba(255,255,255,0.07)' }}
               >
-                <div className="font-orbitron text-[12px] tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                <div className="font-orbitron text-[10px] tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  {getCraft(LEVELS[levelId]).hudLabel}
+                </div>
+                <div className="font-orbitron text-[12px] tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   {LEVELS[levelId]?.name?.toUpperCase()}
                 </div>
                 <button
@@ -280,6 +312,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
             onResume={() => setPaused(false)}
             onRestart={handleRetry}
             onMainMenu={onMainMenu}
+            craft={getCraft(LEVELS[levelId])}
           />
         )}
       </AnimatePresence>
@@ -288,16 +321,22 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
         <PostRunStatsScreen
           stats={postRunStats}
           isLastLevel={levelId === LEVELS.length - 1}
+          nextLabel={isHandoffLevel(levelId) ? 'SEND 3I/ATLAS' : undefined}
           onPlayAgain={handleRetry}
-          onNextLevel={() => handleNextLevel()}
+          onNextLevel={(dest) => handleNextLevel(dest)}
           onMainMenu={onMainMenu}
         />
+      )}
+
+      {state === 'dispatch' && (
+        <DispatchScreen onContinue={handleDispatchContinue} />
       )}
 
       {state === 'game_over' && (
         <GameOverScreen
           levelId={levelId}
           reason={gameOverReason}
+          craft={getCraft(LEVELS[levelId])}
           onRetry={handleRetry}
           onMainMenu={onMainMenu}
         />

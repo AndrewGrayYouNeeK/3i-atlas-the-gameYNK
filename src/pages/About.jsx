@@ -26,22 +26,26 @@ export default function About() {
 
           <div className="space-y-5 text-white/65 leading-relaxed text-sm sm:text-base">
             <p>
-              <strong className="text-white/90">3i-Atlas: The Game</strong> is a stealth-navigation game where you pilot an ancient alien vessel — known as Atlas — disguised as a comet, slipping through humanity's surveillance network across the solar system. Atlas is not a comet. It never was. It is a 4.2-billion-year-old ship masquerading as ice and rock to pass undetected.
+              <strong className="text-white/90">3i-Atlas: The Game</strong> is a stealth-navigation campaign about two interstellar hulls and one watched planet.
+              You start as <strong className="text-white/90">1I/&apos;Oumuamua</strong> — a tumbling scout sent to scope Earth. Then you leave the solar system.
+              Then you send <strong className="text-white/90">3I/ATLAS</strong>, and try to stay undetected while Earth sits in the background, watching.
             </p>
             <p>
-              The game blends precision movement with strategic thinking. You must move like debris — slow, cold, unpowered — using planet gravity, moon shadows, and timed gas releases to stay invisible. Deploy Methane to cloak from visual scanners, Ammonia to jam radar, and Xenon to mask your heat signature. The moment you act like a ship, they know.
+              The game blends precision movement with strategic thinking. Move like debris — slow, cold, unpowered — using planet gravity, moon shadows, and timed gas releases.
+              Deploy Methane to cloak from visual scanners, Ammonia to jam radar, and Xenon to mask your heat signature. The moment you act like a ship, Earth knows.
             </p>
             <p>
-              Each of the seven levels takes place in a distinct region of the solar system, from the frigid Kuiper Belt to the scorching Mercury Sunline. Threats grow more coordinated and aggressive as you progress, with probe networks that share intelligence and hunter drones that chase you on sight.
+              Act I is reconnaissance. Act II is infiltration. Threats grow more coordinated after the first visit: probe networks share intelligence, and hunter drones chase on sight.
+              Earth remains painted behind the sky for the Atlas run — a reminder that the watchers never stopped looking after &apos;Oumuamua.
             </p>
             <p>
-              <strong className="text-white/90">Who is this game for?</strong> 3i-Atlas is designed for players who enjoy arcade-style skill challenges with a sci-fi narrative twist. Whether you prefer a relaxed cruise on Easy difficulty or a punishing, hair-trigger experience on Hard, the game scales to meet you.
+              <strong className="text-white/90">Who is this game for?</strong> Players who want arcade stealth with a sci-fi narrative twist. Easy is a cruise. Hard is a long shadow-and-drift infiltration.
             </p>
             <p>
-              The game features a global leaderboard, unlockable comet skins, and a rich lore system that rewards perfect stealth runs with fragments of Atlas's ancient backstory.
+              The game features a global leaderboard, unlockable comet skins, and lore fragments that unlock on perfect stealth runs.
             </p>
             <p>
-              <strong className="text-white/90">Who builds it?</strong> 3i-Atlas is designed and built by <span className="text-violet-300">Andrew Gray</span>, an independent developer with a passion for atmospheric game design and generative space aesthetics. The project is a continuous labor of craft — from the hand-tuned physics to the AI-generated planet backgrounds.
+              <strong className="text-white/90">Who builds it?</strong> 3i-Atlas is designed and built by <span className="text-violet-300">Andrew Gray</span>, an independent developer with a passion for atmospheric game design and generative space aesthetics.
             </p>
           </div>
 

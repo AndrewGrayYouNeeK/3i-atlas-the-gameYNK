@@ -13,7 +13,7 @@ const TUTORIAL_STEPS = [
   {
     icon: '🎮',
     title: 'Movement',
-    desc: 'WASD or Arrow Keys to steer Atlas through space. On mobile, use the on-screen joystick.',
+    desc: "WASD or Arrow Keys to steer. Act I is 1I/'Oumuamua. Act II is 3I/ATLAS. On mobile, use the on-screen joystick.",
     tip: 'Move slowly to stay undetected',
   },
   {
@@ -49,15 +49,15 @@ const TUTORIAL_STEPS = [
   {
     icon: '🎯',
     title: 'Objectives',
-    desc: 'Complete all mission waypoints per level. Staying below 5% detection unlocks secret Atlas lore.',
+    desc: 'Complete all mission waypoints per level. Stay below 5% detection to unlock scout and Atlas lore.',
     tip: 'Follow the green arrows to waypoints',
   },
 ];
 
-const LEVEL_COLORS = ['#7c3aed', '#0ea5e9', '#dc2626', '#059669', '#f97316', '#2563eb', '#eab308', '#ff6600'];
-const LEVEL_ICONS = ['❄️', '🪐', '🔴', '🌍', '☁️', '🔵', '☀️', '🔥'];
-const DIFFICULTY = ['EASY', 'MEDIUM', 'HARD', 'EXTREME', 'EXTREME', 'EXTREME', 'EXTREME', 'EXTREME'];
-const DIFF_COLORS = ['text-emerald-400', 'text-amber-400', 'text-orange-400', 'text-red-400', 'text-red-400', 'text-red-400', 'text-red-400'];
+const LEVEL_COLORS = ['#e07a45', '#38bdf8', '#64748b', '#7c3aed', '#0ea5e9', '#dc2626', '#f97316', '#ff6600'];
+const LEVEL_ICONS = ['☄️', '🌍', '🚪', '✨', '🪐', '🔴', '☁️', '☀️'];
+const DIFFICULTY = ['EASY', 'MEDIUM', 'MEDIUM', 'HARD', 'HARD', 'EXTREME', 'EXTREME', 'EXTREME'];
+const DIFF_COLORS = ['text-emerald-400', 'text-amber-400', 'text-amber-400', 'text-orange-400', 'text-orange-400', 'text-red-400', 'text-red-400', 'text-red-400'];
 
 export default function MainMenu({ onStartGame }) {
   const navigate = useNavigate();
@@ -191,7 +191,7 @@ export default function MainMenu({ onStartGame }) {
             by <span style={{ color: 'rgba(200,180,255,0.45)' }}>Andrew Gray</span>
           </div>
           <p className="text-sm text-white/35 mt-2 max-w-xs mx-auto leading-relaxed">
-            An alien vessel disguised as a comet. One chance to cross the solar system undetected. Don't act like a ship.
+            Start as {'\'Oumuamua'} and scope Earth. Leave the solar system. Then send 3I/ATLAS — and stay undetected while Earth watches from the background.
           </p>
         </motion.div>
 
@@ -206,8 +206,15 @@ export default function MainMenu({ onStartGame }) {
             SELECT MISSION
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {LEVELS.map((level, i) => (
+          {[{ title: "ACT I · 1I / 'OUMUAMUA", slice: LEVELS.slice(0, 3), offset: 0 }, { title: 'ACT II · 3I / ATLAS', slice: LEVELS.slice(3), offset: 3 }].map((act) => (
+            <div key={act.title} className="mb-4">
+              <div className="font-orbitron text-[9px] tracking-[0.28em] mb-2 px-1" style={{ color: act.offset === 0 ? 'rgba(224,122,69,0.7)' : 'rgba(167,139,250,0.75)' }}>
+                {act.title}
+              </div>
+              <div className={`grid gap-2 ${act.offset === 0 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                {act.slice.map((level, idx) => {
+                  const i = act.offset + idx;
+                  return (
               <motion.button
                 key={level.id}
                 onClick={() => setSelectedLevel(i)}
@@ -232,8 +239,11 @@ export default function MainMenu({ onStartGame }) {
                   />
                 )}
               </motion.button>
-            ))}
-          </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
 
           {/* Selected level description */}
           <AnimatePresence mode="wait">
@@ -315,7 +325,7 @@ export default function MainMenu({ onStartGame }) {
                 <Orbit className="w-4 h-4 text-amber-400" />
                 <span className="font-orbitron text-xs font-bold text-amber-300">SOLAR RUN</span>
               </div>
-              <p className="text-[10px] text-white/45 leading-relaxed">All {LEVELS.length} missions in one epic voyage from the Kuiper Belt to the Sun.</p>
+              <p className="text-[10px] text-white/45 leading-relaxed">Full campaign: recon as {'\'Oumuamua'}, leave the system, then infiltrate as 3I/ATLAS with Earth watching.</p>
             </motion.button>
             <motion.button
               onClick={() => navigate(`/game?level=${daily.levelId}&difficulty=${daily.difficulty}&skin=${selectedSkin}&mode=daily`)}

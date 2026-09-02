@@ -1,14 +1,15 @@
 # Atlas — The Game
 
-A stealth comet infiltration game set across the solar system.
+A stealth campaign: recon Earth as 1I/'Oumuamua, leave the solar system, then send 3I/ATLAS and stay undetected while Earth watches from the background.
 
 ## About
 
-You are Atlas — an ancient intelligence disguised as a comet, on a mission to infiltrate the solar system undetected. Navigate through 7 levels, from the outer Kuiper Belt to Mercury's Sunline, avoiding probes, satellites, and hunters while completing your ancient mission.
+You start as **'Oumuamua** — a tumbling scout hull sent to scope Earth. After the recon, you exit the system and dispatch **3I/ATLAS**. The second visitor has to ghost Earth's sensors. Earth stays painted in the sky for the Atlas run.
 
 ## Features
 
-- 7 unique levels across the solar system
+- Two-act campaign: 1I/'Oumuamua recon, then 3I/ATLAS infiltration
+- Earth backdrop on Atlas missions (they are watching)
 - 3 difficulty modes: Easy, Medium, Hard
 - Gas release mechanics: Methane (optical cloak), Ammonia (radar jam), Xenon (heat mask)
 - Three Eyes system: Night Vision, Heat Scan, Myth Mode (slow time)
@@ -34,13 +35,17 @@ You are Atlas — an ancient intelligence disguised as a comet, on a mission to 
 
 ## Levels
 
-1. **Outer Kuiper Belt** — Easy intro, learn the controls
-2. **Jupiter Ring Passage** — Networked probes that alert each other
-3. **Mars Flyby** — Coordinated hunter patrols
-4. **Earth Orbit** — The ISS Gauntlet, hunter trios
-5. **Venus Veil** — Thermal chaos and sulfur storms
-6. **Neptune Blue Dark** — Long-range relay networks
-7. **Mercury Sunline** — Final burn, brutal detection
+**Act I — 1I/'Oumuamua**
+1. **Interstellar Approach** — Enter from the dark, line up on Earth
+2. **Scope Earth** — Fly close, map the watchers, do not linger
+3. **Leave the System** — Coast out past the heliopause
+
+**Act II — 3I/ATLAS**
+4. **The Dispatch** — The second hull arrives. Earth is watching.
+5. **Jupiter Blind** — Hide behind the giant
+6. **Mars Dark** — No thrust, dishes and Earth both listening
+7. **Inner Watch** — Venus veil, thermal chaos
+8. **Ghost the Watchers** — Final stealth with Earth still in the background
 
 ## Tech Stack
 

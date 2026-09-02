@@ -1,4 +1,4 @@
-import { PHYSICS, LEVELS, DIFFICULTIES, SOLAR_SYSTEM_PLANETS, SKINS } from './constants.js';
+import { PHYSICS, LEVELS, DIFFICULTIES, SOLAR_SYSTEM_PLANETS, SKINS, getCraft } from './constants.js';
 
 
 export class GameEngine {
@@ -44,8 +44,18 @@ export class GameEngine {
     this.ctx = canvas.getContext('2d');
     this.levelId = levelId;
     this.level = LEVELS[levelId];
+    this.craft = getCraft(this.level);
     this.difficulty = DIFFICULTIES[difficultyId] || DIFFICULTIES.medium;
     this.skin = SKINS.find(s => s.id === skinId) || SKINS[0];
+    if (this.craft.id === 'oumuamua') {
+      this.skin = {
+        ...this.skin,
+        coreColor: this.craft.coreColor,
+        glowColor: this.craft.glowColor,
+        trailColor: this.craft.trailColor,
+        nucleusLight: this.craft.nucleusLight,
+      };
+    }
     this.mode = options.mode || 'mission';
     this.threatBonus = options.threatBonus || 0;
     this.scanMult = options.scanMult || 1;
@@ -189,25 +199,14 @@ export class GameEngine {
   _generateGravityWells() {
     const W = this.worldWidth, H = this.worldHeight;
 
-    // One main planet per level — mapped by levelId
-    const levelPlanetIndex = [
-      0, // Level 0: Neptune (Kuiper Belt)
-      4, // Level 1: Jupiter
-      3, // Level 2: Mars
-      2, // Level 3: Earth
-      1, // Level 4: Venus
-      0, // Level 5: Neptune (Blue Dark)
-      7, // Level 6: Mercury (Sunline)
-      8, // Level 7: Sun Dive
-    ];
-    const planetIdx = levelPlanetIndex[Math.min(this.levelId, levelPlanetIndex.length - 1)];
-    const def = SOLAR_SYSTEM_PLANETS[planetIdx];
+    const planetIdx = this.level.planetIndex ?? 0;
+    const def = SOLAR_SYSTEM_PLANETS[Math.min(planetIdx, SOLAR_SYSTEM_PLANETS.length - 1)];
     const radius = def.radius;
     const influenceRadius = radius * 5 + 60;
+    const xFrac = this.level.planetX ?? 0.28;
 
-    // Main planet in the first third of the world
-    const x = W * 0.28 + (Math.random() - 0.5) * W * 0.06;
-    const y = H * 0.5 + (Math.random() - 0.5) * H * 0.25;
+    const x = W * xFrac + (Math.random() - 0.5) * W * 0.04;
+    const y = H * 0.5 + (Math.random() - 0.5) * H * 0.22;
 
     const wells = [{
       x, y,
@@ -222,17 +221,19 @@ export class GameEngine {
       isSun: !!def.isSun,
     }];
 
-    // Secondary body — a small moon for a mid-journey slingshot
-    const moonR = 11 + Math.random() * 4;
+    const isEarth = def.type === 'earth';
+    const moonName = isEarth ? 'Moon' : 'Ice Moon';
+    const moonColor = isEarth ? '#c8cdd4' : '#9aa3b0';
+    const moonR = isEarth ? 8 : 11 + Math.random() * 4;
     wells.push({
       x: W * (this.difficulty.id === 'hard' ? 0.52 : 0.62) + (Math.random() - 0.5) * W * 0.05,
       y: H * 0.4 + (Math.random() - 0.5) * H * 0.35,
       radius: moonR,
       influenceRadius: moonR * 5 + 40,
       strength: 0.6,
-      color: '#9aa3b0',
-      name: 'Ice Moon',
-      def: { name: 'Ice Moon', color: '#9aa3b0', radius: moonR, type: 'scorched', ringCount: 0 },
+      color: moonColor,
+      name: moonName,
+      def: { name: moonName, color: moonColor, radius: moonR, type: isEarth ? 'icy' : 'scorched', ringCount: 0 },
       ringCount: 0,
       angle: 0,
       isSun: false,
@@ -262,7 +263,8 @@ export class GameEngine {
     const W = this.worldWidth, H = this.worldHeight;
     const gw = this.gravityWells[0];
     const yBase = gw && gw.y < H * 0.5 ? H * 0.72 : H * 0.28;
-    const x = W * 0.95 + (Math.random() - 0.5) * W * 0.02;
+    const xFrac = this.level.destX ?? 0.95;
+    const x = W * xFrac + (Math.random() - 0.5) * W * 0.02;
     const y = yBase + (Math.random() - 0.5) * H * 0.1;
     return {
       x: Math.max(60, Math.min(W - 60, x)),
@@ -438,7 +440,7 @@ export class GameEngine {
         radius: 24,
         done: false,
         pulseT: 0,
-        text: 'Thread the planet’s shadow',
+        text: planet.name === 'Earth' ? "Thread Earth's shadow" : 'Thread the planet’s shadow',
       });
     }
     if (moon) {
@@ -449,7 +451,7 @@ export class GameEngine {
         radius: 22,
         done: false,
         pulseT: 0,
-        text: 'Slip the moon blind side',
+        text: moon.name === 'Moon' ? "Slip the Moon's blind side" : 'Slip the moon blind side',
       });
     }
     if (rock) {
@@ -989,6 +991,7 @@ export class GameEngine {
 
     this._drawNebula(ctx, W, H, t);
     this._drawStars(ctx, t);
+    this._drawEarthBackdrop(ctx, W, H, t);
 
     // World-space layer — camera pans horizontally across the level
     ctx.save();
@@ -1079,11 +1082,16 @@ export class GameEngine {
         ctx.shadowColor = 'rgba(160,100,255,1)';
         ctx.shadowBlur = 30;
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(`LEVEL ${this.levelId + 1}`, W / 2, H / 2 - 18);
-        ctx.font = '14px Orbitron, monospace';
+        ctx.fillText(this.craft.hudLabel, W / 2, H / 2 - 28);
+        ctx.font = 'bold 28px Orbitron, monospace';
+        ctx.shadowColor = 'rgba(160,100,255,1)';
+        ctx.shadowBlur = 24;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(this.level.name.toUpperCase(), W / 2, H / 2 + 8);
+        ctx.font = '13px Orbitron, monospace';
         ctx.fillStyle = 'rgba(200,180,255,0.9)';
         ctx.shadowBlur = 12;
-        ctx.fillText(this.level.name.toUpperCase(), W / 2, H / 2 + 20);
+        ctx.fillText(this.level.subtitle.toUpperCase(), W / 2, H / 2 + 36);
         ctx.globalAlpha = 1;
         ctx.restore();
       }
@@ -1092,9 +1100,12 @@ export class GameEngine {
 
   _drawNebula(ctx, W, H, t) {
     // Draw AI background image if loaded
-    const bgImg = GameEngine.BG_IMGS && GameEngine.BG_IMGS[Math.min(this.levelId, 6)];
+    const watchingEarth = this.level.earthBackdrop === 'watching' || this.level.earthBackdrop === 'close'
+      || (this.level.earthBackdrop === 'none' && this.level.planetIndex === 5);
+    const bgKey = watchingEarth ? 2 : Math.min(this.levelId, 6);
+    const bgImg = GameEngine.BG_IMGS && GameEngine.BG_IMGS[bgKey];
     if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = watchingEarth ? 0.28 : 0.35;
       ctx.drawImage(bgImg, 0, 0, W, H);
       ctx.globalAlpha = 1.0;
     }
@@ -1112,6 +1123,142 @@ export class GameEngine {
       ctx.arc(nx, ny, d.r, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  _drawEarthBackdrop(ctx, W, H, t) {
+    const mode = this.level.earthBackdrop;
+    if (!mode || mode === 'none') return;
+
+    const sizes = { distant: Math.min(W, H) * 0.16, close: Math.min(W, H) * 0.28, receding: Math.min(W, H) * 0.12, watching: Math.min(W, H) * 0.38 };
+    const R = sizes[mode] || Math.min(W, H) * 0.22;
+    const pos = {
+      distant: { x: W * 0.88, y: H * 0.78 },
+      close: { x: W * 0.84, y: H * 0.72 },
+      receding: { x: W * 0.10, y: H * 0.74 },
+      watching: { x: W * 0.90, y: H * 0.62 },
+    }[mode] || { x: W * 0.88, y: H * 0.7 };
+
+    const spin = t * 0.00008;
+    const watchPulse = 0.5 + 0.5 * Math.sin(t * 0.0018);
+
+    ctx.save();
+    ctx.globalAlpha = mode === 'watching' ? 0.92 : mode === 'receding' ? 0.72 : 0.8;
+    ctx.translate(pos.x, pos.y);
+
+    // Atmosphere limb
+    const atm = ctx.createRadialGradient(0, 0, R * 0.88, 0, 0, R * 1.55);
+    atm.addColorStop(0, 'rgba(70,160,255,0.0)');
+    atm.addColorStop(0.55, 'rgba(70,160,255,0.18)');
+    atm.addColorStop(0.82, 'rgba(180,220,255,0.35)');
+    atm.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(0, 0, R * 1.55, 0, Math.PI * 2);
+    ctx.fillStyle = atm;
+    ctx.fill();
+
+    // Body
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, Math.PI * 2);
+    const body = ctx.createRadialGradient(-R * 0.35, -R * 0.35, R * 0.08, 0, 0, R);
+    body.addColorStop(0, '#6ec8ff');
+    body.addColorStop(0.45, '#1d6fbf');
+    body.addColorStop(1, '#0a2a55');
+    ctx.fillStyle = body;
+    ctx.shadowColor = 'rgba(80,160,255,0.55)';
+    ctx.shadowBlur = 28;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, Math.PI * 2);
+    ctx.clip();
+
+    const lands = [
+      { x: -0.22, y: -0.12, rx: 0.32, ry: 0.20, a: spin * 0.6 },
+      { x: 0.18, y: 0.16, rx: 0.24, ry: 0.28, a: spin * 0.5 + 0.4 },
+      { x: -0.08, y: 0.28, rx: 0.18, ry: 0.12, a: spin * 0.4 },
+      { x: 0.30, y: -0.22, rx: 0.16, ry: 0.12, a: spin * 0.7 },
+    ];
+    for (const lb of lands) {
+      ctx.beginPath();
+      ctx.ellipse(lb.x * R, lb.y * R, lb.rx * R, lb.ry * R, lb.a, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(46,120,58,0.72)';
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.ellipse(0, -R * 0.82, R * 0.42, R * 0.16, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(240,248,255,0.55)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(0, R * 0.84, R * 0.38, R * 0.14, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(230,240,255,0.4)';
+    ctx.fill();
+
+    for (let c = 0; c < 5; c++) {
+      const cx = Math.cos(spin * 2 + c * 1.3) * R * 0.45;
+      const cy = Math.sin(spin + c * 0.9) * R * 0.38;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, R * 0.28, R * 0.07, c * 0.7 + spin, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      ctx.fill();
+    }
+
+    // Night terminator + city lights when Earth is watching
+    if (mode === 'watching' || mode === 'close') {
+      const night = ctx.createLinearGradient(-R, 0, R * 0.2, 0);
+      night.addColorStop(0, 'rgba(0,8,28,0.55)');
+      night.addColorStop(0.55, 'rgba(0,8,28,0.18)');
+      night.addColorStop(1, 'transparent');
+      ctx.fillStyle = night;
+      ctx.fillRect(-R, -R, R * 1.2, R * 2);
+      for (let i = 0; i < 18; i++) {
+        const lx = -R * (0.15 + (i % 6) * 0.12);
+        const ly = -R * 0.4 + Math.floor(i / 6) * R * 0.32 + Math.sin(spin * 4 + i) * 6;
+        if (lx * lx + ly * ly > R * R * 0.72) continue;
+        ctx.fillStyle = `rgba(255,210,120,${0.25 + watchPulse * 0.35})`;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+
+    if (mode === 'watching') {
+      ctx.strokeStyle = `rgba(80,200,255,${0.18 + watchPulse * 0.18})`;
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([5, 10]);
+      ctx.beginPath();
+      ctx.arc(0, 0, R * 1.22 + watchPulse * 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, R * 1.42, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = `rgba(180,220,255,${0.45 + watchPulse * 0.25})`;
+      ctx.font = 'bold 9px Orbitron, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('EARTH', 0, R + 18);
+      ctx.fillStyle = `rgba(255,180,80,${0.55 + watchPulse * 0.3})`;
+      ctx.font = '8px Orbitron, monospace';
+      ctx.fillText('WATCHING', 0, R + 30);
+    } else if (mode === 'receding') {
+      ctx.fillStyle = 'rgba(180,210,255,0.45)';
+      ctx.font = 'bold 8px Orbitron, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('EARTH', 0, R + 16);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.font = '7px Orbitron, monospace';
+      ctx.fillText('ASTERN', 0, R + 26);
+    } else {
+      ctx.fillStyle = 'rgba(180,210,255,0.4)';
+      ctx.font = 'bold 8px Orbitron, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('EARTH', 0, R + 16);
+    }
+
+    ctx.restore();
   }
 
   _drawStars(ctx, t) {
@@ -1817,7 +1964,156 @@ export class GameEngine {
     }
   }
 
+  _drawOumuamuaTail(ctx, t) {
+    const a = this.atlas;
+    const trail = a.trail;
+    const vel = Math.sqrt(a.vx ** 2 + a.vy ** 2);
+    const dustColBase = this.gasActive
+      ? ({ methane: '80,255,180', ammonia: '255,210,80', xenon: '200,140,255' }[this.gasActive])
+      : this.skin.trailColor;
+    const spd = Math.max(vel, 0.5);
+    const tailX = Math.abs(a.vx) + Math.abs(a.vy) < 0.2 ? -1 : -a.vx / spd;
+    const tailY = Math.abs(a.vx) + Math.abs(a.vy) < 0.2 ? 0 : -a.vy / spd;
+
+    if (this.ghostTrail.length > 1) {
+      ctx.save();
+      for (let i = 0; i < this.ghostTrail.length; i++) {
+        const g = this.ghostTrail[i];
+        const frac = i / this.ghostTrail.length;
+        const r = frac * 10;
+        const ghostG = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, r);
+        ghostG.addColorStop(0, `rgba(${dustColBase},${frac * 0.22})`);
+        ghostG.addColorStop(1, 'transparent');
+        ctx.fillStyle = ghostG;
+        ctx.beginPath();
+        ctx.arc(g.x, g.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    ctx.save();
+    const dustLen = 46 + vel * 10;
+    for (let i = 0; i < 70; i++) {
+      const frac = i / 70;
+      const wobble = Math.sin(frac * 10 + t * 0.006) * (frac * 2.2);
+      const perpX = -tailY, perpY = tailX;
+      const px = a.x + tailX * dustLen * frac + perpX * wobble;
+      const py = a.y + tailY * dustLen * frac + perpY * wobble;
+      ctx.beginPath();
+      ctx.arc(px, py, Math.max(0.4, (1 - frac) * 1.8), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${dustColBase},${(1 - frac) * 0.45})`;
+      ctx.fill();
+    }
+    ctx.restore();
+
+    if (trail.length >= 4) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      for (let i = 1; i < trail.length; i++) {
+        const prog = i / trail.length;
+        ctx.beginPath();
+        ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
+        ctx.lineTo(trail[i].x, trail[i].y);
+        ctx.strokeStyle = `rgba(${dustColBase},${prog * 0.4})`;
+        ctx.lineWidth = prog * 2.4;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    ctx.save();
+    const coma = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 22);
+    coma.addColorStop(0, `rgba(${dustColBase},0.22)`);
+    coma.addColorStop(1, 'transparent');
+    ctx.fillStyle = coma;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _drawOumuamua(ctx, t) {
+    const { x, y, nucleusAngle } = this.atlas;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 0.003);
+    const skin = this.skin;
+    const heading = Math.atan2(this.atlas.vy, this.atlas.vx || 0.001);
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(heading);
+    ctx.rotate(nucleusAngle * 0.35);
+
+    const len = 22;
+    const wid = 7.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, len, wid, 0, 0, Math.PI * 2);
+    const body = ctx.createRadialGradient(-len * 0.25, -wid * 0.3, 2, 0, 0, len);
+    body.addColorStop(0, skin.nucleusLight);
+    body.addColorStop(0.35, skin.coreColor);
+    body.addColorStop(1, '#5a3a28');
+    ctx.fillStyle = body;
+    ctx.shadowColor = skin.glowColor;
+    ctx.shadowBlur = 16;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,210,160,0.28)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, len, wid, 0, 0, Math.PI * 2);
+    ctx.clip();
+    const ridges = [-10, -4, 3, 9];
+    for (const rx of ridges) {
+      ctx.beginPath();
+      ctx.ellipse(rx, 0, 3.2, wid * 0.85, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(40,22,12,0.28)';
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.ellipse(-len * 0.35, -wid * 0.25, 5, 3, -0.4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fill();
+    ctx.restore();
+    ctx.restore();
+
+    if (this.atlas.eyeMode) {
+      const eyeColMap = { night: '0,255,80', heat: '255,80,0', myth: '180,80,255' };
+      const eyeCol = eyeColMap[this.atlas.eyeMode] || '255,120,0';
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(heading + nucleusAngle * 0.35);
+      for (let i = 0; i < 3; i++) {
+        const ex = -8 + i * 8;
+        const ep = 0.55 + 0.45 * Math.sin(t * 0.007 + i);
+        ctx.beginPath();
+        ctx.arc(ex, 0, 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${eyeCol},${ep})`;
+        ctx.shadowColor = `rgba(${eyeCol},1)`;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    if (this.gasActive) {
+      const halo = ctx.createRadialGradient(x, y, 0, x, y, 26);
+      halo.addColorStop(0, `rgba(${skin.trailColor},${0.2 + pulse * 0.1})`);
+      halo.addColorStop(1, 'transparent');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(x, y, 26, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   _drawCometTail(ctx, t) {
+    if (this.craft.id === 'oumuamua') {
+      this._drawOumuamuaTail(ctx, t);
+      return;
+    }
     const a = this.atlas;
     const trail = a.trail;
     const vel = Math.sqrt(a.vx ** 2 + a.vy ** 2);
@@ -1971,6 +2267,10 @@ export class GameEngine {
   }
 
   _drawComet(ctx, t) {
+    if (this.craft.id === 'oumuamua') {
+      this._drawOumuamua(ctx, t);
+      return;
+    }
     const { x, y, nucleusAngle } = this.atlas;
     const pulse = 0.5 + 0.5 * Math.sin(t * 0.004);
     const vel = Math.sqrt(this.atlas.vx ** 2 + this.atlas.vy ** 2);
@@ -2203,10 +2503,10 @@ export class GameEngine {
     ctx.fillStyle = `rgba(140,230,255,${0.7 + pulse * 0.3})`;
     ctx.font = 'bold 9px Orbitron, monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('DESTINATION', dest.x, dest.y + R + 16);
+    ctx.fillText(this.level.destLabel || 'DESTINATION', dest.x, dest.y + R + 16);
     ctx.fillStyle = `rgba(255,255,255,0.4)`;
     ctx.font = '8px Orbitron, monospace';
-    ctx.fillText('SLINGSHOT IN', dest.x, dest.y + R + 26);
+    ctx.fillText(this.level.destSub || 'SLINGSHOT IN', dest.x, dest.y + R + 26);
 
     // Arrow guide from Atlas toward destination
     const dx = dest.x - this.atlas.x, dy = dest.y - this.atlas.y;
