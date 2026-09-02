@@ -41,18 +41,18 @@ export default function EndgameScreen({ totalScore, onRestart }) {
 
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
           <div className="font-orbitron text-[9px] tracking-[0.4em] mb-3" style={{ color: 'rgba(167,139,250,0.7)' }}>
-            THE FINAL MOMENT
+            THE SECOND VISIT
           </div>
           <h2 className="font-orbitron text-4xl font-black text-white mb-2"
             style={{ textShadow: '0 0 40px rgba(160,80,255,0.8)' }}>
-            Earth Orbit Achieved
+            Ghosted Earth
           </h2>
           <p className="text-sm mb-2" style={{ color: 'rgba(200,180,255,0.7)', fontFamily: "'Exo 2',sans-serif" }}>
             Final Score: <span className="font-bold text-violet-300">{totalScore.toLocaleString()}</span>
           </p>
           <p className="text-sm leading-relaxed mb-10 max-w-md mx-auto" style={{ color: 'rgba(255,255,255,0.55)', fontFamily: "'Exo 2',sans-serif" }}>
-            3-Eyed Atlas has completed the mythic circuit. The sky held, the asteroids towed, humanity observed in silence.
-            Now, at the edge of Earth's atmosphere, the choice presents itself.
+            3I/ATLAS completed the circuit with Earth still watching from the background.
+            They never confirmed the second visitor. The scout already left. Now the choice is yours.
           </p>
         </motion.div>
 

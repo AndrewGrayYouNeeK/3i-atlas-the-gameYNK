@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { RefreshCw, Home } from 'lucide-react';
 
-export default function GameOverScreen({ levelId, reason, onRetry, onMainMenu }) {
+export default function GameOverScreen({ levelId, reason, onRetry, onMainMenu, craft }) {
   const isCollision = reason === 'collision';
 
   return (
@@ -40,8 +40,10 @@ export default function GameOverScreen({ levelId, reason, onRetry, onMainMenu })
           </h2>
           <p className="text-sm leading-relaxed mb-6" style={{ color: 'rgba(255,255,255,0.45)', fontFamily: "'Exo 2', sans-serif" }}>
             {isCollision
-              ? 'Atlas collided with a planetary body. The icy shell shattered on impact. Mission terminated.'
-              : "NASA's tracking array locked onto your signature. 3-Eyed Atlas has been exposed. The mission failed."
+              ? `${craft?.shortName || 'Atlas'} collided with a planetary body. The hull shattered on impact. Mission terminated.`
+              : craft?.id === 'oumuamua'
+                ? "Earth's telescopes locked onto 1I/'Oumuamua. The scout is burned. 3I/ATLAS cannot launch."
+                : "Earth's tracking array locked onto 3I/ATLAS. The second visitor is exposed. The mission failed."
             }
           </p>
 

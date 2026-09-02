@@ -7,7 +7,7 @@ const getStealthGrade = (detection) => {
   return 'C';
 };
 
-export default function PostRunStatsScreen({ stats, onPlayAgain, onNextLevel, onMainMenu, isLastLevel }) {
+export default function PostRunStatsScreen({ stats, onPlayAgain, onNextLevel, onMainMenu, isLastLevel, nextLabel }) {
   const grade = getStealthGrade(stats?.detection || 0);
 
   return (
@@ -49,7 +49,8 @@ export default function PostRunStatsScreen({ stats, onPlayAgain, onNextLevel, on
 
         <div className="flex flex-col gap-2">
           <button onClick={onPlayAgain} className="w-full py-3 rounded-2xl font-orbitron text-sm text-white" style={{ background: 'linear-gradient(135deg,#7c3aed,#5b21b6)' }}>PLAY AGAIN</button>
-          {!isLastLevel && <button onClick={onNextLevel} className="w-full py-3 rounded-2xl font-orbitron text-sm" style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', color: '#38bdf8' }}>NEXT LEVEL</button>}
+          {!isLastLevel && <button onClick={() => onNextLevel()} className="w-full py-3 rounded-2xl font-orbitron text-sm" style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', color: '#38bdf8' }}>{nextLabel || 'NEXT LEVEL'}</button>}
+          {isLastLevel && <button onClick={() => onNextLevel('endgame')} className="w-full py-3 rounded-2xl font-orbitron text-sm" style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', color: '#38bdf8' }}>GHOST EARTH</button>}
           <button onClick={onMainMenu} className="w-full py-3 rounded-2xl font-orbitron text-sm" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>MAIN MENU</button>
         </div>
       </motion.div>

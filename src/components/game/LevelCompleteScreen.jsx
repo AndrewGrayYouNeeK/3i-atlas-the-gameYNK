@@ -110,7 +110,9 @@ export default function LevelCompleteScreen({ levelId, score, detection, onNextL
             >
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Lock className="w-3 h-3 text-violet-400" />
-                <span className="font-orbitron text-[8px] text-violet-400 tracking-widest">ATLAS LORE UNLOCKED</span>
+                <span className="font-orbitron text-[8px] text-violet-400 tracking-widest">
+                  {level.craft === 'oumuamua' ? 'SCOUT LORE UNLOCKED' : 'ATLAS LORE UNLOCKED'}
+                </span>
               </div>
               <p className="text-[10px] leading-relaxed italic" style={{ color: 'rgba(255,255,255,0.55)', fontFamily: "'Exo 2', sans-serif" }}>
                 &ldquo;{level.lore}&rdquo;

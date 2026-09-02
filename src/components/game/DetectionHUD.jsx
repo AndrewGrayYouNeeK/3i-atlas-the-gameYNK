@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Eye } from 'lucide-react';
 
-export default function DetectionHUD({ detection, score, level, comboMultiplier = 1, inShadow = false }) {
+export default function DetectionHUD({ detection, score, level, comboMultiplier = 1, inShadow = false, craft, earthWatching = false }) {
   const safe = detection < 5;
   const low = detection < 20;
   const med = detection >= 20 && detection < 60;
@@ -32,7 +32,9 @@ export default function DetectionHUD({ detection, score, level, comboMultiplier 
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5">
             <Eye className="w-3 h-3" style={{ color: statusColor }} />
-            <span className="font-orbitron text-[12px] tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>DETECTION</span>
+            <span className="font-orbitron text-[12px] tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              {earthWatching ? 'EARTH WATCH' : 'DETECTION'}
+            </span>
           </div>
           <motion.div
             key={statusText}
@@ -93,7 +95,10 @@ export default function DetectionHUD({ detection, score, level, comboMultiplier 
         className="px-3 py-2.5 rounded-2xl text-right backdrop-blur-md"
         style={{ background: 'rgba(5,5,18,0.75)', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 4px 24px rgba(0,0,0,0.5)', minWidth: 80 }}
       >
-        <div className="font-orbitron text-[11px] tracking-widest mb-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        <div className="font-orbitron text-[10px] tracking-widest mb-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          {craft?.hudLabel || `LVL ${level + 1}`}
+        </div>
+        <div className="font-orbitron text-[11px] tracking-widest mb-0.5" style={{ color: 'rgba(167,139,250,0.7)' }}>
           LVL {level + 1}
         </div>
         <div className="font-orbitron text-lg font-bold text-white tabular-nums">

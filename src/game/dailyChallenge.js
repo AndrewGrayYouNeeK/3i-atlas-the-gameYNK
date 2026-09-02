@@ -13,8 +13,10 @@ export function getDailyChallenge() {
 
   const levelId = hash % LEVELS.length;
   const diffKeys = Object.keys(DIFFICULTIES);
-  const difficulty = diffKeys[(hash >> 4) % diffKeys.length];
-  const bonusLabel = (hash >> 8) % 3 === 0 ? 'Narrow scans' : (hash >> 8) % 3 === 1 ? 'Extra threats' : 'Low gas';
+  // Use unsigned shifts — signed >> can go negative once the high bit is set
+  const difficulty = diffKeys[(hash >>> 4) % diffKeys.length];
+  const bonusRoll = (hash >>> 8) % 3;
+  const bonusLabel = bonusRoll === 0 ? 'Narrow scans' : bonusRoll === 1 ? 'Extra threats' : 'Low gas';
 
   return {
     dateKey: key,
