@@ -3,10 +3,10 @@
  * Build + deploy Atlas to Cloudflare Workers (static assets) and attach 3iatlasgame.xyz.
  *
  * Required env:
- *   CLOUDFLARE_ACCOUNT_ID
- *   CLOUDFLARE_API_TOKEN   (Workers Scripts Write + Zone DNS Edit + Zone Read)
+ *   CLOUDFLARE_API_TOKEN   (Workers Scripts Edit + Zone DNS Edit + Zone Read)
  *
  * Optional:
+ *   CLOUDFLARE_ACCOUNT_ID    (if omitted, uses the sole account the token can see)
  *   CLOUDFLARE_PROJECT_NAME  (default: 3i-atlas-the-game)
  *   SITE_DOMAIN              (default: 3iatlasgame.xyz)
  *   SKIP_BUILD=1             (deploy existing dist/)
@@ -14,12 +14,31 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
-const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const PROJECT = process.env.CLOUDFLARE_PROJECT_NAME || '3i-atlas-the-game';
 const DOMAIN = process.env.SITE_DOMAIN || '3iatlasgame.xyz';
 const WWW = `www.${DOMAIN}`;
 const API = 'https://api.cloudflare.com/client/v4';
+
+const TOKEN_HELP = `Create a NEW API token (the current one cannot deploy Workers):
+  https://dash.cloudflare.com/profile/api-tokens
+  Create Token → Create Custom Token
+
+Permissions (all three):
+  Account → Workers Scripts → Edit
+  Zone    → DNS             → Edit
+  Zone    → Zone            → Read
+
+Account resources: Include → Andrewgray@youneek.xyz's Account
+Zone resources:    Include → Specific zone → 3iatlasgame.xyz
+
+Then in GitHub → Settings → Secrets and variables → Actions:
+  CLOUDFLARE_API_TOKEN     = (the new token)
+  CLOUDFLARE_ACCOUNT_ID    = 6b8b358d7780d34a3f941be39b4b28d6
+
+Re-run Actions → Deploy Cloudflare Workers.`;
+
+let accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 
 function die(msg) {
   console.error(`\nERROR: ${msg}\n`);
@@ -48,9 +67,39 @@ async function cf(path, { method = 'GET', body } = {}) {
   return json.result;
 }
 
+async function resolveAccountId() {
+  let accounts;
+  try {
+    accounts = (await cf('/accounts')) || [];
+  } catch (err) {
+    die(`Could not list Cloudflare accounts with this token.\n${err.message}\n\n${TOKEN_HELP}`);
+  }
+  if (!accounts.length) die(`This API token cannot see any Cloudflare accounts.\n\n${TOKEN_HELP}`);
+
+  console.log('Token can access:');
+  for (const a of accounts) console.log(`  ${a.name}  ${a.id}`);
+
+  if (accountId && accounts.some((a) => a.id === accountId)) return accountId;
+  if (accountId) {
+    console.warn(
+      `CLOUDFLARE_ACCOUNT_ID=${accountId} is not an account this token can use. Switching to ${accounts[0].id}.`,
+    );
+  }
+  if (accounts.length === 1) return accounts[0].id;
+  die(
+    `Token sees multiple accounts. Set CLOUDFLARE_ACCOUNT_ID to one of:\n${accounts
+      .map((a) => `  ${a.id}  ${a.name}`)
+      .join('\n')}`,
+  );
+}
+
 async function findZoneId(hostname) {
   const zones = await cf(`/zones?name=${encodeURIComponent(hostname)}`);
-  if (!zones?.length) die(`No Cloudflare zone found for ${hostname}. Is DNS on Cloudflare?`);
+  if (!zones?.length) {
+    die(
+      `No Cloudflare zone found for ${hostname} with this token.\nAdd Zone → Zone → Read and Zone → DNS → Edit for ${hostname}.\n\n${TOKEN_HELP}`,
+    );
+  }
   return zones[0].id;
 }
 
@@ -66,7 +115,7 @@ async function clearConflictingDns(zoneId, name) {
 
 async function listWorkerDomains() {
   try {
-    return (await cf(`/accounts/${ACCOUNT_ID}/workers/domains`)) || [];
+    return (await cf(`/accounts/${accountId}/workers/domains`)) || [];
   } catch (err) {
     console.warn(`Could not list Worker domains: ${err.message}`);
     return [];
@@ -82,11 +131,10 @@ async function ensureCustomDomain(hostname, zoneId) {
     return existing;
   }
 
-  // Custom domains cannot be created while a CNAME/A already exists on the hostname.
   await clearConflictingDns(zoneId, hostname);
 
   console.log(`Attaching custom domain ${hostname} → Worker ${PROJECT}…`);
-  const attached = await cf(`/accounts/${ACCOUNT_ID}/workers/domains`, {
+  const attached = await cf(`/accounts/${accountId}/workers/domains`, {
     method: 'PUT',
     body: {
       hostname,
@@ -100,8 +148,7 @@ async function ensureCustomDomain(hostname, zoneId) {
 }
 
 async function main() {
-  if (!ACCOUNT_ID) die('CLOUDFLARE_ACCOUNT_ID is required');
-  if (!TOKEN) die('CLOUDFLARE_API_TOKEN is required (Workers Scripts Write + Zone DNS Edit)');
+  if (!TOKEN) die(`CLOUDFLARE_API_TOKEN is required.\n\n${TOKEN_HELP}`);
 
   if (process.env.SKIP_BUILD !== '1') {
     if (!existsSync('.env.production') && existsSync('.env.example')) {
@@ -112,14 +159,21 @@ async function main() {
   }
   if (!existsSync('dist/index.html')) die('dist/index.html missing — build failed?');
 
+  accountId = await resolveAccountId();
+  console.log(`Using Cloudflare account ${accountId}`);
+
   console.log(`\nDeploying dist/ to Worker ${PROJECT}…`);
-  sh('npx wrangler deploy', {
-    env: {
-      ...process.env,
-      CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID,
-      CLOUDFLARE_API_TOKEN: TOKEN,
-    },
-  });
+  try {
+    sh('npx wrangler deploy', {
+      env: {
+        ...process.env,
+        CLOUDFLARE_ACCOUNT_ID: accountId,
+        CLOUDFLARE_API_TOKEN: TOKEN,
+      },
+    });
+  } catch {
+    die(`wrangler deploy failed (Cloudflare code 10000 = token missing Workers Scripts Edit).\n\n${TOKEN_HELP}`);
+  }
 
   const zoneId = await findZoneId(DOMAIN);
   await ensureCustomDomain(DOMAIN, zoneId);
@@ -129,14 +183,11 @@ async function main() {
 ────────────────────────────────────────
 Deployed.
 
-  Worker:  https://${PROJECT}.<account>.workers.dev
   Apex:    https://${DOMAIN}
   WWW:     https://${WWW}
 
-If the apex still shows Cloudflare Error 1000 or “Just a moment…”:
-  1. Confirm Workers → ${PROJECT} → Settings → Domains lists ${DOMAIN}
-  2. Cloudflare dashboard → ${DOMAIN} → Security → Settings
-     → Security Level = Medium (not “I’m Under Attack”)
+If the apex still shows a Cloudflare challenge:
+  ${DOMAIN} → Security → Settings → Security Level = Medium
 ────────────────────────────────────────
 `);
 }
