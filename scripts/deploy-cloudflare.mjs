@@ -113,7 +113,7 @@ async function main() {
   if (!existsSync('dist/index.html')) die('dist/index.html missing — build failed?');
 
   console.log(`\nDeploying dist/ to Worker ${PROJECT}…`);
-  sh('npx wrangler deploy --commit-dirty=true', {
+  sh('npx wrangler deploy', {
     env: {
       ...process.env,
       CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID,
