@@ -29,9 +29,9 @@ const TUTORIAL_STEPS = [
     tip: 'Gas charges are finite — use them wisely',
   },
   {
-    icon: '👁',
-    title: 'Three Eyes',
-    desc: 'Press 1 = Night Vision, 2 = Heat Scan, 3 = Myth Mode (slow time, 20s cooldown).',
+    icon: '📡',
+    title: 'Sensors',
+    desc: 'Press 1 = Night Vision, 2 = Heat Scan, 3 = Myth Mode (slow time, 20s cooldown). HUD tools only — the comet itself has no face.',
     tip: 'Myth Mode is your panic button',
   },
   {

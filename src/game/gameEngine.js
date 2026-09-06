@@ -640,17 +640,19 @@ export class GameEngine {
     a.x = Math.max(20, Math.min(this.worldWidth - 20, a.x));
     a.y = Math.max(20, Math.min(this.worldHeight - 20, a.y));
 
-    // Dust trail — emitted opposite to velocity so it streams behind the comet
+    // Fine dust grains — blown anti-sun, not a sparkle fountain
     const vel = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
-    const dustCount = Math.floor(vel * 3 + 2);
+    const sun = this._sunAway();
+    const dry = this.craft.id === 'oumuamua';
+    const dustCount = dry ? (Math.random() < 0.22 ? 1 : 0) : (vel > 0.35 && Math.random() < 0.55 ? 1 : 0);
     for (let i = 0; i < dustCount; i++) {
       this.dustParticles.push({
-        x: a.x + (Math.random() - 0.5) * 6,
-        y: a.y + (Math.random() - 0.5) * 6,
-        vx: -a.vx * 0.55 + (Math.random() - 0.5) * 0.6,
-        vy: -a.vy * 0.55 + (Math.random() - 0.5) * 0.6,
+        x: a.x + (Math.random() - 0.5) * 4,
+        y: a.y + (Math.random() - 0.5) * 4,
+        vx: sun.x * (0.55 + Math.random() * 0.45) - a.vx * 0.12 + (Math.random() - 0.5) * 0.25,
+        vy: sun.y * (0.55 + Math.random() * 0.45) - a.vy * 0.12 + (Math.random() - 0.5) * 0.25,
         life: 1,
-        r: Math.random() * 3.5 + 1,
+        r: Math.random() * 1.4 + 0.4,
         type: 'dust',
       });
     }
@@ -2037,11 +2039,77 @@ export class GameEngine {
     }
   }
 
+  _sunAway() {
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const sx = this.camera.x + W * 0.08;
+    const sy = H * 0.16;
+    const dx = this.atlas.x - sx;
+    const dy = this.atlas.y - sy;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: dx / len, y: dy / len, px: -dy / len, py: dx / len };
+  }
+
+  _mixRgb(base, tint, amount) {
+    const [br, bg, bb] = base.split(',').map(Number);
+    const [tr, tg, tb] = tint.split(',').map(Number);
+    return [
+      Math.round(br + (tr - br) * amount),
+      Math.round(bg + (tg - bg) * amount),
+      Math.round(bb + (tb - bb) * amount),
+    ].join(',');
+  }
+
+  _tailPalette() {
+    const gas = this.gasActive
+      ? { methane: '150,220,190', ammonia: '230,205,140', xenon: '190,175,230' }[this.gasActive]
+      : null;
+    const skinTint = this.skin?.trailColor || '215,190,155';
+    const skinAmt = this.skin?.id && this.skin.id !== 'default' ? 0.28 : 0.08;
+    let dust = this._mixRgb('232,210,176', skinTint, skinAmt);
+    let ion = this.craft.ionColor || '155,195,245';
+    if (gas) {
+      dust = this._mixRgb(dust, gas, 0.35);
+      ion = this._mixRgb(ion, gas, 0.22);
+    }
+    return { dust, ion };
+  }
+
+  _drawSoftFan(ctx, x, y, dirX, dirY, perpX, perpY, length, halfWidth, color, alpha) {
+    const tipX = x + dirX * length;
+    const tipY = y + dirY * length;
+    const midX = x + dirX * length * 0.42;
+    const midY = y + dirY * length * 0.42;
+    ctx.beginPath();
+    ctx.moveTo(x + perpX * 2, y + perpY * 2);
+    ctx.quadraticCurveTo(
+      midX + perpX * halfWidth,
+      midY + perpY * halfWidth,
+      tipX + perpX * (halfWidth * 0.14),
+      tipY + perpY * (halfWidth * 0.14),
+    );
+    ctx.lineTo(tipX - perpX * (halfWidth * 0.14), tipY - perpY * (halfWidth * 0.14));
+    ctx.quadraticCurveTo(
+      midX - perpX * halfWidth,
+      midY - perpY * halfWidth,
+      x - perpX * 2,
+      y - perpY * 2,
+    );
+    ctx.closePath();
+    const g = ctx.createLinearGradient(x, y, tipX, tipY);
+    g.addColorStop(0, `rgba(${color},${alpha})`);
+    g.addColorStop(0.2, `rgba(${color},${alpha * 0.55})`);
+    g.addColorStop(0.62, `rgba(${color},${alpha * 0.16})`);
+    g.addColorStop(1, `rgba(${color},0)`);
+    ctx.fillStyle = g;
+    ctx.fill();
+  }
+
   _drawGasParticles(ctx) {
     for (const p of this.gasParticles) {
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-      ctx.fillStyle = p.col + (p.life * 0.6).toFixed(2) + ')';
+      ctx.arc(p.x, p.y, p.r * p.life * 1.35, 0, Math.PI * 2);
+      ctx.fillStyle = p.col + (p.life * 0.2).toFixed(2) + ')';
       ctx.fill();
     }
   }
@@ -2049,156 +2117,76 @@ export class GameEngine {
   _drawDustParticles(ctx) {
     for (const p of this.dustParticles) {
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-      const gasDust = this.gasActive ? { methane: '200,255,200', ammonia: '255,230,150', xenon: '220,180,255' }[this.gasActive] : '220,230,255';
-      ctx.fillStyle = `rgba(${gasDust},${p.life * 0.35})`;
+      ctx.arc(p.x, p.y, Math.max(0.3, p.r * p.life * 0.55), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(232,214,180,${p.life * 0.2})`;
       ctx.fill();
     }
   }
 
   _drawOumuamuaTail(ctx, t) {
     const a = this.atlas;
-    const trail = a.trail;
-    const vel = Math.sqrt(a.vx ** 2 + a.vy ** 2);
-    const dustColBase = this.gasActive
-      ? ({ methane: '80,255,180', ammonia: '255,210,80', xenon: '200,140,255' }[this.gasActive])
-      : this.skin.trailColor;
-    const spd = Math.max(vel, 0.5);
-    const tailX = Math.abs(a.vx) + Math.abs(a.vy) < 0.2 ? -1 : -a.vx / spd;
-    const tailY = Math.abs(a.vx) + Math.abs(a.vy) < 0.2 ? 0 : -a.vy / spd;
-
-    if (this.ghostTrail.length > 1) {
-      ctx.save();
-      for (let i = 0; i < this.ghostTrail.length; i++) {
-        const g = this.ghostTrail[i];
-        const frac = i / this.ghostTrail.length;
-        const r = frac * 10;
-        const ghostG = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, r);
-        ghostG.addColorStop(0, `rgba(${dustColBase},${frac * 0.22})`);
-        ghostG.addColorStop(1, 'transparent');
-        ctx.fillStyle = ghostG;
-        ctx.beginPath();
-        ctx.arc(g.x, g.y, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
+    const vel = Math.hypot(a.vx, a.vy);
+    const sun = this._sunAway();
+    const { dust } = this._tailPalette();
+    const rockDust = this._mixRgb(dust, '196,154,118', 0.55);
 
     ctx.save();
-    const dustLen = 46 + vel * 10;
-    for (let i = 0; i < 70; i++) {
-      const frac = i / 70;
-      const wobble = Math.sin(frac * 10 + t * 0.006) * (frac * 2.2);
-      const perpX = -tailY, perpY = tailX;
-      const px = a.x + tailX * dustLen * frac + perpX * wobble;
-      const py = a.y + tailY * dustLen * frac + perpY * wobble;
-      ctx.beginPath();
-      ctx.arc(px, py, Math.max(0.4, (1 - frac) * 1.8), 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${dustColBase},${(1 - frac) * 0.45})`;
-      ctx.fill();
-    }
-    ctx.restore();
-
-    if (trail.length >= 4) {
-      ctx.save();
-      ctx.lineCap = 'round';
-      for (let i = 1; i < trail.length; i++) {
-        const prog = i / trail.length;
-        ctx.beginPath();
-        ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
-        ctx.lineTo(trail[i].x, trail[i].y);
-        ctx.strokeStyle = `rgba(${dustColBase},${prog * 0.4})`;
-        ctx.lineWidth = prog * 2.4;
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    ctx.save();
-    const coma = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 22);
-    coma.addColorStop(0, `rgba(${dustColBase},0.22)`);
+    ctx.globalCompositeOperation = 'lighter';
+    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, 58 + vel * 9, 8, rockDust, 0.14);
+    const coma = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 18);
+    coma.addColorStop(0, `rgba(${rockDust},0.08)`);
     coma.addColorStop(1, 'transparent');
     ctx.fillStyle = coma;
     ctx.beginPath();
-    ctx.arc(a.x, a.y, 22, 0, Math.PI * 2);
+    ctx.arc(a.x, a.y, 18, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
   _drawOumuamua(ctx, t) {
     const { x, y, nucleusAngle } = this.atlas;
-    const pulse = 0.5 + 0.5 * Math.sin(t * 0.003);
-    const skin = this.skin;
     const heading = Math.atan2(this.atlas.vy, this.atlas.vx || 0.001);
+    const sun = this._sunAway();
+    const litX = -sun.x;
+    const litY = -sun.y;
 
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(heading);
-    ctx.rotate(nucleusAngle * 0.35);
+    const spin = heading + nucleusAngle * 0.35;
+    ctx.rotate(spin);
+    const c = Math.cos(-spin);
+    const s = Math.sin(-spin);
+    const lx = litX * c - litY * s;
+    const ly = litX * s + litY * c;
 
-    const len = 22;
-    const wid = 7.5;
+    const len = 20;
+    const wid = 6.4;
     ctx.beginPath();
     ctx.ellipse(0, 0, len, wid, 0, 0, Math.PI * 2);
-    const body = ctx.createRadialGradient(-len * 0.25, -wid * 0.3, 2, 0, 0, len);
-    body.addColorStop(0, skin.nucleusLight);
-    body.addColorStop(0.35, skin.coreColor);
-    body.addColorStop(1, '#5a3a28');
+    const body = ctx.createRadialGradient(lx * len * 0.4, ly * wid * 0.4, 1.2, 0, 0, len);
+    body.addColorStop(0, '#c4a07a');
+    body.addColorStop(0.28, '#8a6848');
+    body.addColorStop(0.62, '#3d2a1c');
+    body.addColorStop(1, '#120c09');
     ctx.fillStyle = body;
-    ctx.shadowColor = skin.glowColor;
-    ctx.shadowBlur = 16;
     ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(255,210,160,0.28)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
 
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(0, 0, len, wid, 0, 0, Math.PI * 2);
     ctx.clip();
-    const ridges = [-10, -4, 3, 9];
-    for (const rx of ridges) {
+    for (const rx of [-11, -4, 3, 10]) {
       ctx.beginPath();
-      ctx.ellipse(rx, 0, 3.2, wid * 0.85, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(40,22,12,0.28)';
+      ctx.ellipse(rx, 0, 2.5, wid * 0.8, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(18,10,6,0.3)';
       ctx.fill();
     }
     ctx.beginPath();
-    ctx.ellipse(-len * 0.35, -wid * 0.25, 5, 3, -0.4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.ellipse(lx * 7, ly * 3, 4.4, 2.2, -0.35, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,228,196,0.16)';
     ctx.fill();
     ctx.restore();
     ctx.restore();
-
-    if (this.atlas.eyeMode) {
-      const eyeColMap = { night: '0,255,80', heat: '255,80,0', myth: '180,80,255' };
-      const eyeCol = eyeColMap[this.atlas.eyeMode] || '255,120,0';
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(heading + nucleusAngle * 0.35);
-      for (let i = 0; i < 3; i++) {
-        const ex = -8 + i * 8;
-        const ep = 0.55 + 0.45 * Math.sin(t * 0.007 + i);
-        ctx.beginPath();
-        ctx.arc(ex, 0, 1.8, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${eyeCol},${ep})`;
-        ctx.shadowColor = `rgba(${eyeCol},1)`;
-        ctx.shadowBlur = 8;
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-
-    if (this.gasActive) {
-      const halo = ctx.createRadialGradient(x, y, 0, x, y, 26);
-      halo.addColorStop(0, `rgba(${skin.trailColor},${0.2 + pulse * 0.1})`);
-      halo.addColorStop(1, 'transparent');
-      ctx.fillStyle = halo;
-      ctx.beginPath();
-      ctx.arc(x, y, 26, 0, Math.PI * 2);
-      ctx.fill();
-    }
   }
 
   _drawCometTail(ctx, t) {
@@ -2207,98 +2195,73 @@ export class GameEngine {
       return;
     }
     const a = this.atlas;
-    const trail = a.trail;
-    const vel = Math.sqrt(a.vx ** 2 + a.vy ** 2);
-    const gasColors = { methane: '90,200,150', ammonia: '210,190,110', xenon: '170,150,210' };
-    const dustCol = this.gasActive ? gasColors[this.gasActive] : (this.craft.dustColor || this.skin.trailColor || '215,190,155');
-    const ionCol = this.craft.ionColor || '150,195,255';
-    const spd = Math.max(vel, 0.5);
-    const tailX = Math.abs(a.vx) + Math.abs(a.vy) < 0.2 ? -1 : -a.vx / spd;
-    const tailY = Math.abs(a.vx) + Math.abs(a.vy) < 0.2 ? 0 : -a.vy / spd;
-    const perpX = -tailY;
-    const perpY = tailX;
-    const skinTrail = dustCol;
-    const pulse = 0.5 + 0.5 * Math.sin(t * 0.004);
-    const dustColBase = dustCol;
+    const vel = Math.hypot(a.vx, a.vy);
+    const sun = this._sunAway();
+    const { dust, ion } = this._tailPalette();
+    const pulse = 0.5 + 0.5 * Math.sin(t * 0.0015);
 
-    if (this.ghostTrail.length > 1) {
-      ctx.save();
-      for (let i = 0; i < this.ghostTrail.length; i++) {
-        const g = this.ghostTrail[i];
-        const frac = i / this.ghostTrail.length;
-        const r = frac * 14;
-        const ghostG = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, r);
-        ghostG.addColorStop(0, `rgba(${skinTrail},${frac * 0.18})`);
-        ghostG.addColorStop(1, 'transparent');
-        ctx.fillStyle = ghostG;
-        ctx.beginPath();
-        ctx.arc(g.x, g.y, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
+    // Type I ion tail: straight, anti-sun. Type II dust tail: broader, lags the orbit.
+    const vLen = Math.hypot(a.vx, a.vy) || 1;
+    const orbitX = -a.vx / vLen;
+    const orbitY = -a.vy / vLen;
+    const dustX = sun.x * 0.7 + orbitX * 0.3;
+    const dustY = sun.y * 0.7 + orbitY * 0.3;
+    const dN = Math.hypot(dustX, dustY) || 1;
+    const dX = dustX / dN;
+    const dY = dustY / dN;
+    const dPx = -dY;
+    const dPy = dX;
+
+    const ionLen = 260 + vel * 36;
+    const dustLen = 175 + vel * 22;
 
     ctx.save();
-    const dustLen = 90 + vel * 14;
-    for (let i = 0; i < 90; i++) {
-      const frac = i / 90;
-      const curve = Math.sin(frac * 1.4) * frac * 18 + Math.sin(frac * 9 + t * 0.003) * frac * 2.2;
-      const px = a.x + tailX * dustLen * frac + perpX * curve;
-      const py = a.y + tailY * dustLen * frac + perpY * curve;
+    ctx.globalCompositeOperation = 'lighter';
+
+    this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen * 1.08, 58, dust, 0.2);
+    this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen, 34, '255,232,200', 0.13);
+    this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen * 0.62, 16, '255,244,220', 0.1);
+
+    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen, 12, ion, 0.26);
+    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen * 0.88, 5, '210,230,255', 0.2);
+    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen * 0.7, 2.2, '235,245,255', 0.16);
+
+    for (let s = 0; s < 4; s++) {
+      const off = (s - 1.5) * 3.6;
+      const wobble = Math.sin(t * 0.0011 + s * 1.8) * 2.8;
       ctx.beginPath();
-      ctx.arc(px, py, (1 - frac) * 7 + frac * 2, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${dustCol},${(1 - frac) * 0.16})`;
-      ctx.fill();
-    }
-    ctx.restore();
-
-    if (trail.length >= 4) {
-      ctx.save();
-      ctx.lineCap = 'round';
-      for (let i = 1; i < trail.length; i++) {
-        const prog = i / trail.length;
-        ctx.beginPath();
-        ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
-        ctx.lineTo(trail[i].x, trail[i].y);
-        ctx.strokeStyle = `rgba(${dustColBase},${prog * 0.28})`;
-        ctx.lineWidth = prog * 7;
-        ctx.stroke();
-      }
-      ctx.restore();
+      ctx.moveTo(a.x, a.y);
+      ctx.quadraticCurveTo(
+        a.x + sun.x * ionLen * 0.42 + sun.px * (off + wobble),
+        a.y + sun.y * ionLen * 0.42 + sun.py * (off + wobble),
+        a.x + sun.x * ionLen * 0.94 + sun.px * off * 0.35,
+        a.y + sun.y * ionLen * 0.94 + sun.py * off * 0.35,
+      );
+      ctx.strokeStyle = `rgba(175,210,255,${0.055 + pulse * 0.035})`;
+      ctx.lineWidth = 1.05;
+      ctx.stroke();
     }
 
-    ctx.save();
-    const ionLen = 130 + vel * 18;
-    for (let i = 0; i < 70; i++) {
-      const frac = i / 70;
-      const wobble = Math.sin(frac * 11 + t * 0.01) * frac * 1.4;
-      const px = a.x + perpX * 4 + tailX * ionLen * frac + perpX * wobble;
-      const py = a.y + perpY * 4 + tailY * ionLen * frac + perpY * wobble;
-      ctx.beginPath();
-      ctx.arc(px, py, Math.max(0.3, (1 - frac) * 1.6), 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${ionCol},${(1 - frac) * 0.38})`;
-      ctx.fill();
-    }
-    const ionGrad = ctx.createLinearGradient(a.x, a.y, a.x + tailX * ionLen * 0.55, a.y + tailY * ionLen * 0.55);
-    ionGrad.addColorStop(0, `rgba(${ionCol},0.45)`);
-    ionGrad.addColorStop(1, 'transparent');
+    const bowX = a.x - sun.x * 10;
+    const bowY = a.y - sun.y * 10;
+    const outer = ctx.createRadialGradient(bowX, bowY, 0, a.x, a.y, 70);
+    outer.addColorStop(0, `rgba(${dust},0.18)`);
+    outer.addColorStop(0.38, `rgba(${ion},0.07)`);
+    outer.addColorStop(1, 'transparent');
+    ctx.fillStyle = outer;
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(a.x + tailX * ionLen * 0.55, a.y + tailY * ionLen * 0.55);
-    ctx.strokeStyle = ionGrad;
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    ctx.restore();
-
-    ctx.save();
-    const comaOuter = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 52);
-    comaOuter.addColorStop(0, `rgba(${dustCol},${0.18 + pulse * 0.04})`);
-    comaOuter.addColorStop(0.45, `rgba(${dustCol},0.07)`);
-    comaOuter.addColorStop(1, 'transparent');
-    ctx.fillStyle = comaOuter;
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, 52, 0, Math.PI * 2);
+    ctx.arc(a.x, a.y, 70, 0, Math.PI * 2);
     ctx.fill();
+
+    const inner = ctx.createRadialGradient(bowX, bowY, 0, a.x, a.y, 28);
+    inner.addColorStop(0, `rgba(255,248,236,${0.22 + pulse * 0.04})`);
+    inner.addColorStop(0.5, `rgba(${dust},0.1)`);
+    inner.addColorStop(1, 'transparent');
+    ctx.fillStyle = inner;
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 28, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.restore();
   }
 
@@ -2344,144 +2307,104 @@ export class GameEngine {
       return;
     }
     const { x, y, nucleusAngle } = this.atlas;
-    const pulse = 0.5 + 0.5 * Math.sin(t * 0.004);
-    const skin = this.skin;
-    const dustCol = this.craft.dustColor || skin.trailColor || '215,190,155';
-    const vel2 = Math.sqrt(this.atlas.vx ** 2 + this.atlas.vy ** 2) || 0.01;
+    const sun = this._sunAway();
+    const litX = -sun.x;
+    const litY = -sun.y;
+    const fire = this.skin.id === 'fire_comet';
+    const { dust } = this._tailPalette();
 
     ctx.save();
-    const comaG = ctx.createRadialGradient(x, y, 0, x, y, 36);
-    comaG.addColorStop(0, `rgba(${dustCol},0.28)`);
-    comaG.addColorStop(0.45, `rgba(${dustCol},0.08)`);
-    comaG.addColorStop(1, 'transparent');
-    ctx.fillStyle = comaG;
+    ctx.translate(x, y);
+
+    // Faint sunward sublimation — a real jet, not cartoon spokes
+    const jetLen = 22 + Math.sin(t * 0.002) * 2;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const jet = ctx.createRadialGradient(litX * 6, litY * 6, 0, litX * 10, litY * 10, jetLen);
+    jet.addColorStop(0, `rgba(${dust},0.16)`);
+    jet.addColorStop(0.5, `rgba(${dust},0.05)`);
+    jet.addColorStop(1, 'transparent');
+    ctx.fillStyle = jet;
     ctx.beginPath();
-    ctx.arc(x, y, 36, 0, Math.PI * 2);
+    ctx.ellipse(litX * 5, litY * 5, jetLen * 0.38, jetLen * 0.85, Math.atan2(litY, litX), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    ctx.save();
-    ctx.translate(x, y);
-    const jetAngle = Math.atan2(-this.atlas.vy / vel2, -this.atlas.vx / vel2);
-    for (let j = 0; j < 3; j++) {
-      const spread = (j - 1) * 0.22;
-      const ja = jetAngle + spread;
-      const jetLen = 12 + pulse * 5 + vel2 * 2.5;
-      const jg = ctx.createLinearGradient(0, 0, Math.cos(ja) * jetLen, Math.sin(ja) * jetLen);
-      jg.addColorStop(0, `rgba(230,220,210,${0.28 + pulse * 0.08})`);
-      jg.addColorStop(0.5, `rgba(${dustCol},0.12)`);
-      jg.addColorStop(1, 'transparent');
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(Math.cos(ja) * jetLen, Math.sin(ja) * jetLen);
-      ctx.strokeStyle = jg;
-      ctx.lineWidth = j === 1 ? 2.1 : 1.1;
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // ── NUCLEUS — rocky irregular shape ──────────────────────────────────────
-    ctx.save();
-    ctx.translate(x, y);
     ctx.rotate(nucleusAngle);
+    const c = Math.cos(-nucleusAngle);
+    const s = Math.sin(-nucleusAngle);
+    const lx = litX * c - litY * s;
+    const ly = litX * s + litY * c;
 
-    const NR = 13; // bigger nucleus
-    const pts = 14;
+    const NR = 12;
+    const pts = 16;
     const buildPath = () => {
       ctx.beginPath();
       for (let i = 0; i <= pts; i++) {
         const ang = (i / pts) * Math.PI * 2;
-        const lobe = 0.78 + 0.22 * Math.cos(ang * 2 + 0.5);
-        const jitter = NR * lobe * (0.78 + 0.22 * Math.sin(i * 3.1 + 1.7));
-        const px = Math.cos(ang) * jitter;
-        const py = Math.sin(ang) * jitter * 0.70;
+        const lobe = 0.82 + 0.16 * Math.cos(ang * 3 + 0.7) + 0.08 * Math.sin(ang * 5 + 1.1);
+        const px = Math.cos(ang) * NR * lobe;
+        const py = Math.sin(ang) * NR * lobe * 0.86;
         i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
       }
       ctx.closePath();
     };
 
     buildPath();
-    const nBody = ctx.createRadialGradient(-NR * 0.35, -NR * 0.35, 0, 0, 0, NR * 1.2);
-    nBody.addColorStop(0, skin.nucleusLight);
-    nBody.addColorStop(0.3, skin.coreColor);
-    nBody.addColorStop(1, skin.id === 'dark_matter' || skin.id === 'void_reaper' ? '#000000' : skin.coreColor);
+    const nBody = ctx.createRadialGradient(lx * NR * 0.45, ly * NR * 0.45, NR * 0.08, 0, 0, NR * 1.2);
+    if (fire) {
+      nBody.addColorStop(0, '#c4a078');
+      nBody.addColorStop(0.32, '#6a4030');
+      nBody.addColorStop(0.7, '#241410');
+      nBody.addColorStop(1, '#0a0605');
+    } else {
+      nBody.addColorStop(0, '#c8c0b4');
+      nBody.addColorStop(0.26, '#6e6054');
+      nBody.addColorStop(0.58, '#2c2622');
+      nBody.addColorStop(1, '#0a0908');
+    }
     ctx.fillStyle = nBody;
-    ctx.shadowColor = skin.glowColor;
-    ctx.shadowBlur = skin.id === 'neon_ghost' ? 22 : 10;
     ctx.fill();
-    ctx.strokeStyle = skin.id === 'neon_ghost' ? '#00eeff' : 'rgba(200,180,150,0.28)';
-    ctx.lineWidth = skin.id === 'neon_ghost' ? 2 : 1;
-    ctx.shadowBlur = skin.id === 'neon_ghost' ? 16 : 0;
-    ctx.stroke();
 
-    // Surface detail: craters + highlight
-    ctx.shadowBlur = 0;
-    const craterDefs = [
-      { cx: -3, cy: -3, r: 3.0 },
-      { cx: 4,  cy: 2.5, r: 2.2 },
-      { cx: -5, cy: 4,   r: 1.8 },
-      { cx: 2,  cy: -5,  r: 1.4 },
-    ];
     ctx.save();
     buildPath();
     ctx.clip();
+
+    const craterDefs = [
+      { cx: -3.2, cy: -2.4, r: 2.6 },
+      { cx: 3.6, cy: 2.2, r: 2.0 },
+      { cx: -4.4, cy: 3.4, r: 1.6 },
+      { cx: 2.2, cy: -4.2, r: 1.3 },
+    ];
     for (const cr of craterDefs) {
       ctx.beginPath();
       ctx.arc(cr.cx, cr.cy, cr.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.60)';
+      ctx.fillStyle = 'rgba(0,0,0,0.32)';
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(cr.cx - cr.r * 0.3, cr.cy - cr.r * 0.3, cr.r * 0.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.arc(cr.cx - cr.r * 0.28, cr.cy - cr.r * 0.28, cr.r * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,245,230,0.08)';
       ctx.fill();
     }
-    // Specular highlight
+
     ctx.beginPath();
-    ctx.arc(-NR * 0.28, -NR * 0.28, NR * 0.28, 0, Math.PI * 2);
-    const spec = ctx.createRadialGradient(-NR*0.28, -NR*0.28, 0, -NR*0.28, -NR*0.28, NR*0.28);
-    spec.addColorStop(0, 'rgba(255,255,255,0.32)');
-    spec.addColorStop(1, 'transparent');
-    ctx.fillStyle = spec;
+    ctx.ellipse(lx * NR * 0.28, ly * NR * 0.22, NR * 0.34, NR * 0.2, Math.atan2(ly, lx), 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(210,220,230,0.16)';
     ctx.fill();
-    ctx.restore();
 
-    ctx.restore();
-
-    ctx.save();
-    const innerComa = ctx.createRadialGradient(x, y, 0, x, y, 16);
-    innerComa.addColorStop(0, `rgba(${dustCol},${0.22 + pulse * 0.08})`);
-    innerComa.addColorStop(1, 'transparent');
-    ctx.fillStyle = innerComa;
     ctx.beginPath();
-    ctx.arc(x, y, 16, 0, Math.PI * 2);
+    ctx.ellipse(-lx * NR * 0.32, -ly * NR * 0.26, NR * 0.4, NR * 0.24, Math.atan2(ly, lx), 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
     ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-NR * 0.4, NR * 0.08);
+    ctx.quadraticCurveTo(0, -NR * 0.06, NR * 0.42, NR * 0.16);
+    ctx.stroke();
     ctx.restore();
-
-    // ── THREE EYES — glowing dots on nucleus when active ─────────────────────
-    if (this.atlas.eyeMode) {
-      const eyeColMap = { night: '0,255,80', heat: '255,80,0', myth: '180,80,255' };
-      const eyeCol = eyeColMap[this.atlas.eyeMode] || '255,120,0';
-      ctx.save();
-      ctx.translate(x, y);
-      const eyePositions = [
-        -Math.PI / 2,
-        -Math.PI / 2 + Math.PI * 2 / 3,
-        -Math.PI / 2 + Math.PI * 4 / 3,
-      ];
-      for (let i = 0; i < 3; i++) {
-        const ex = Math.cos(eyePositions[i] + nucleusAngle) * 7;
-        const ey = Math.sin(eyePositions[i] + nucleusAngle) * 5;
-        const ep = 0.6 + 0.4 * Math.sin(t * 0.007 + i * 1.1);
-        ctx.beginPath();
-        ctx.arc(ex, ey, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${eyeCol},${ep})`;
-        ctx.shadowColor = `rgba(${eyeCol},1)`;
-        ctx.shadowBlur = 10;
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-
+    ctx.restore();
   }
 
   _drawDestination(ctx, t) {

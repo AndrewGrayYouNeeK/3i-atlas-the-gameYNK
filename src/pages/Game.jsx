@@ -299,7 +299,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
                 className="px-3 py-1.5 rounded-xl backdrop-blur-md font-orbitron text-[10px] tracking-[0.18em]"
                 style={{ background: 'rgba(5,5,18,0.58)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.42)' }}
               >
-                WASD / ARROWS MOVE · SHIFT BURST · CTRL SLOW · Q E R GAS · 1 2 3 EYES · ESC PAUSE
+                WASD / ARROWS MOVE · SHIFT BURST · CTRL SLOW · Q E R GAS · 1 2 3 SENSORS · ESC PAUSE
               </div>
             </div>
 
