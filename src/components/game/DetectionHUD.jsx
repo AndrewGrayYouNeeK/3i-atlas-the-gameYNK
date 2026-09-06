@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Eye } from 'lucide-react';
 
-export default function DetectionHUD({ detection, score, level, comboMultiplier = 1, inShadow = false, craft, earthWatching = false, requiredGases = [], usedGases = [], gateBlocked = false }) {
+export default function DetectionHUD({ detection, score, level, comboMultiplier = 1, inShadow = false, craft, earthWatching = false, requiredGases = [], usedGases = [], gateBlocked = false, cloakMiss = null }) {
   const safe = detection < 5;
   const low = detection < 20;
   const med = detection >= 20 && detection < 60;
@@ -122,15 +122,19 @@ export default function DetectionHUD({ detection, score, level, comboMultiplier 
         )}
       </div>
     </div>
-    {(missing.length > 0 || gateBlocked) && (
+    {(missing.length > 0 || gateBlocked || cloakMiss) && (
       <div className="self-center px-3 py-1.5 rounded-xl backdrop-blur-md font-orbitron text-[10px] tracking-widest text-center"
         style={{
-          background: gateBlocked ? 'rgba(80,20,10,0.82)' : 'rgba(5,5,18,0.7)',
-          border: `1px solid ${gateBlocked ? 'rgba(255,140,70,0.55)' : 'rgba(255,255,255,0.08)'}`,
-          color: gateBlocked ? '#ffb070' : 'rgba(255,255,255,0.55)',
+          background: cloakMiss || gateBlocked ? 'rgba(80,20,10,0.82)' : 'rgba(5,5,18,0.7)',
+          border: `1px solid ${cloakMiss || gateBlocked ? 'rgba(255,140,70,0.55)' : 'rgba(255,255,255,0.08)'}`,
+          color: cloakMiss || gateBlocked ? '#ffb070' : 'rgba(255,255,255,0.55)',
         }}
       >
-        {gateBlocked ? `GATE LOCKED — VENT ${missing.join(' + ').toUpperCase()}` : `CLOAK: ${missing.join(' · ').toUpperCase()}`}
+        {cloakMiss
+          ? cloakMiss
+          : gateBlocked
+            ? `GATE LOCKED — VENT ${missing.join(' + ').toUpperCase()}`
+            : `CLOAK: ${missing.join(' · ').toUpperCase()}`}
       </div>
     )}
     </div>

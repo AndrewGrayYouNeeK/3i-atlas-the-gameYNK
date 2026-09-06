@@ -82,7 +82,9 @@ export class GameEngine {
     this.gasActive = null;
     this.gasTimer = 0;
     this.usedGases = new Set();
+    this.gasSequence = [];
     this.gateBlocked = false;
+    this.cloakMiss = null;
     this.gasCooldowns = { methane: 0, ammonia: 0, xenon: 0 };
     // Gas charges by difficulty: easy=5, medium=3, hard=2
     const gasCount = this.difficulty.id === 'easy' ? 5 : this.difficulty.id === 'hard' ? 2 : 3;
@@ -314,17 +316,17 @@ export class GameEngine {
         const dm = this.difficulty.threatSpeedMult;
         const configs = {
           probe: {
-            speed: (1.2 + this.levelId * 0.3) * dm,
-            scanRadius: 100 + this.levelId * 15,
+            speed: (1.2 + Math.min(this.levelId, 8) * 0.3) * dm,
+            scanRadius: 100 + Math.min(this.levelId, 8) * 15,
             scanArc: Math.PI / 2.5,
-            scanSpeed: 0.025 + this.levelId * 0.008,
+            scanSpeed: 0.025 + Math.min(this.levelId, 8) * 0.008,
             color: '#00ccff', size: 5,
             detects: ['visual', 'radar'],
             patrol: 'sweep',
           },
           satellite: {
             speed: 0.6 * dm,
-            scanRadius: 140 + this.levelId * 20,
+            scanRadius: 140 + Math.min(this.levelId, 8) * 20,
             scanArc: Math.PI * 0.4,
             scanSpeed: 0.018,
             color: '#ffcc00', size: 7,
@@ -332,7 +334,7 @@ export class GameEngine {
             patrol: 'orbit',
           },
           hunter: {
-            speed: (2.0 + this.levelId * 0.4) * dm,
+            speed: (2.0 + Math.min(this.levelId, 8) * 0.4) * dm,
             scanRadius: 90,
             scanArc: Math.PI / 3,
             scanSpeed: 0.04,
@@ -438,16 +440,22 @@ export class GameEngine {
       ammonia: 'Vent ammonia (E) — radar jam',
       xenon: 'Vent xenon (R) — heat mask',
     };
-    for (const g of this.level.requiredGases || []) {
+    const req = this.level.requiredGases || [];
+    const ordered = !!this.level.gasOrder;
+    const inScan = !!this.level.cloakInScan;
+    req.forEach((g, idx) => {
+      let text = gasLabels[g] || `Vent ${g}`;
+      if (ordered) text = `${idx + 1}. ${text}`;
+      if (inScan) text += ' — inside a scan';
       marks.push({
         id: `gas-${g}`,
         virtual: true,
         gasId: g,
         done: false,
         pulseT: 0,
-        text: gasLabels[g] || `Vent ${g}`,
+        text,
       });
-    }
+    });
     if (this.difficulty.id !== 'hard') return marks;
     const W = this.worldWidth;
     const planet = this.gravityWells[0];
@@ -511,6 +519,25 @@ export class GameEngine {
       const py = y1 + t * dy;
       const hitR = gw.radius + 6;
       if ((px - gw.x) ** 2 + (py - gw.y) ** 2 < hitR * hitR) return true;
+    }
+    return false;
+  }
+
+  _inMatchingScan(gasId) {
+    const map = { methane: 'visual', ammonia: 'radar', xenon: 'heat' };
+    const sense = map[gasId];
+    if (!sense) return false;
+    const atlas = this.atlas;
+    for (const threat of this.threats) {
+      if (!threat.detects?.includes(sense)) continue;
+      const dx = atlas.x - threat.x;
+      const dy = atlas.y - threat.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist >= threat.scanRadius) continue;
+      const angleToAtlas = Math.atan2(dy, dx);
+      const angleDiff = Math.abs(((angleToAtlas - threat.scanAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+      const inArc = threat.scanArc >= Math.PI * 1.9 || angleDiff < threat.scanArc / 2;
+      if (inArc) return true;
     }
     return false;
   }
@@ -982,17 +1009,45 @@ export class GameEngine {
     }
     this.gasActive = gasId;
     this.gasCharges[gasId]--;
-    this.usedGases.add(gasId);
     const durations = { methane: 6, ammonia: 5, xenon: 8 };
     this.gasTimer = durations[gasId];
-    let objChanged = false;
-    for (const obj of this.objectives) {
-      if (obj.gasId === gasId && !obj.done) {
-        obj.done = true;
-        objChanged = true;
+
+    const req = this.level.requiredGases || [];
+    const needsScan = !!this.level.cloakInScan;
+    const ordered = !!this.level.gasOrder;
+    const inScan = this._inMatchingScan(gasId);
+    let counted = false;
+
+    if (needsScan && !inScan) {
+      this.cloakMiss = 'VENT INSIDE A MATCHING SCAN';
+    } else if (ordered) {
+      const next = req.find((g) => !this.usedGases.has(g));
+      if (gasId === next) {
+        this.usedGases.add(gasId);
+        this.gasSequence.push(gasId);
+        this.cloakMiss = null;
+        counted = true;
+      } else if (req.includes(gasId) && !this.usedGases.has(gasId)) {
+        this.cloakMiss = `WRONG ORDER — NEED ${(next || req[0]).toUpperCase()}`;
+      } else {
+        this.cloakMiss = null;
       }
+    } else {
+      this.usedGases.add(gasId);
+      this.cloakMiss = null;
+      counted = true;
     }
-    if (objChanged && this.onObjectiveUpdate) this.onObjectiveUpdate(this.objectives);
+
+    if (counted) {
+      let objChanged = false;
+      for (const obj of this.objectives) {
+        if (obj.gasId === gasId && !obj.done) {
+          obj.done = true;
+          objChanged = true;
+        }
+      }
+      if (objChanged && this.onObjectiveUpdate) this.onObjectiveUpdate(this.objectives);
+    }
     if (this.onGasChange) this.onGasChange(gasId, this.gasCooldowns, this.gasCharges);
   }
 

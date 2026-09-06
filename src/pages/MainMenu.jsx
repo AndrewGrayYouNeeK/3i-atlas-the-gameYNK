@@ -47,17 +47,22 @@ const TUTORIAL_STEPS = [
     tip: 'Bursting on Hard lights you up. Shadow + slow drift is the strategy.',
   },
   {
-    icon: '🎯',
-    title: 'Objectives',
-    desc: 'Complete all mission waypoints per level. Stay below 5% detection to unlock scout and Atlas lore.',
-    tip: 'Follow the green arrows to waypoints',
+    icon: '🧩',
+    title: 'Stealth puzzles',
+    desc: 'Later missions lock the exit until you spend the right cloak — sometimes in order, sometimes only while a scanner is looking at you. Wrong gas wastes a charge.',
+    tip: 'Read the mission list. REQ on a gas is the next move, not a suggestion.',
   },
 ];
 
-const LEVEL_COLORS = ['#e07a45', '#38bdf8', '#64748b', '#7c3aed', '#0ea5e9', '#dc2626', '#f97316', '#ff6600'];
-const LEVEL_ICONS = ['☄️', '🌍', '🚪', '✨', '🪐', '🔴', '☁️', '☀️'];
-const DIFFICULTY = ['EASY', 'MEDIUM', 'MEDIUM', 'HARD', 'HARD', 'EXTREME', 'EXTREME', 'EXTREME'];
-const DIFF_COLORS = ['text-emerald-400', 'text-amber-400', 'text-amber-400', 'text-orange-400', 'text-orange-400', 'text-red-400', 'text-red-400', 'text-red-400'];
+const ACTS = [
+  { title: "ACT I · 1I / 'OUMUAMUA", start: 0, end: 3, color: 'rgba(224,122,69,0.7)' },
+  { title: 'ACT II · 3I / ATLAS', start: 3, end: 8, color: 'rgba(167,139,250,0.75)' },
+  { title: 'ACT III · STEALTH PUZZLES', start: 8, end: Infinity, color: 'rgba(56,189,248,0.8)' },
+];
+const LEVEL_COLORS = ['#e07a45', '#38bdf8', '#64748b', '#7c3aed', '#0ea5e9', '#dc2626', '#f97316', '#ff6600', '#c8b97a', '#4db3c8', '#38bdf8', '#8a7a6a', '#ff6600'];
+const LEVEL_ICONS = ['☄️', '🌍', '🚪', '✨', '🪐', '🔴', '☁️', '☀️', '💍', '🌙', '🔗', '🪨', '🕳'];
+const DIFFICULTY = ['EASY', 'MEDIUM', 'MEDIUM', 'HARD', 'HARD', 'EXTREME', 'EXTREME', 'EXTREME', 'HARD', 'HARD', 'EXTREME', 'EXTREME', 'EXTREME'];
+const DIFF_COLORS = ['text-emerald-400', 'text-amber-400', 'text-amber-400', 'text-orange-400', 'text-orange-400', 'text-red-400', 'text-red-400', 'text-red-400', 'text-orange-400', 'text-orange-400', 'text-red-400', 'text-red-400', 'text-red-400'];
 
 export default function MainMenu({ onStartGame }) {
   const navigate = useNavigate();
@@ -191,7 +196,7 @@ export default function MainMenu({ onStartGame }) {
             by <span style={{ color: 'rgba(200,180,255,0.45)' }}>Andrew Gray</span>
           </div>
           <p className="text-sm text-white/35 mt-2 max-w-xs mx-auto leading-relaxed">
-            Start as {'\'Oumuamua'} and scope Earth. Leave the solar system. Then send 3I/ATLAS — and stay undetected while Earth watches from the background.
+            Start as {'\'Oumuamua'} and scope Earth. Leave the solar system. Then send 3I/ATLAS — later missions are stealth puzzles: order, timing, and which cloak you spend.
           </p>
         </motion.div>
 
@@ -206,14 +211,17 @@ export default function MainMenu({ onStartGame }) {
             SELECT MISSION
           </div>
 
-          {[{ title: "ACT I · 1I / 'OUMUAMUA", slice: LEVELS.slice(0, 3), offset: 0 }, { title: 'ACT II · 3I / ATLAS', slice: LEVELS.slice(3), offset: 3 }].map((act) => (
+          {ACTS.map((act) => {
+            const slice = LEVELS.slice(act.start, act.end === Infinity ? undefined : act.end);
+            if (!slice.length) return null;
+            return (
             <div key={act.title} className="mb-4">
-              <div className="font-orbitron text-[9px] tracking-[0.28em] mb-2 px-1" style={{ color: act.offset === 0 ? 'rgba(224,122,69,0.7)' : 'rgba(167,139,250,0.75)' }}>
+              <div className="font-orbitron text-[9px] tracking-[0.28em] mb-2 px-1" style={{ color: act.color }}>
                 {act.title}
               </div>
-              <div className={`grid gap-2 ${act.offset === 0 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
-                {act.slice.map((level, idx) => {
-                  const i = act.offset + idx;
+              <div className={`grid gap-2 ${slice.length <= 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                {slice.map((level, idx) => {
+                  const i = act.start + idx;
                   return (
               <motion.button
                 key={level.id}
@@ -225,12 +233,12 @@ export default function MainMenu({ onStartGame }) {
                     ? 'border-violet-500/70 bg-violet-900/30'
                     : 'border-white/8 bg-white/4 hover:border-white/18 hover:bg-white/6'
                   }`}
-                style={selectedLevel === i ? { boxShadow: `0 0 20px ${LEVEL_COLORS[i]}40, 0 4px 20px rgba(0,0,0,0.4)` } : { boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}
+                style={selectedLevel === i ? { boxShadow: `0 0 20px ${LEVEL_COLORS[i] || level.accent}40, 0 4px 20px rgba(0,0,0,0.4)` } : { boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}
               >
-                <div className="text-base mb-1.5">{LEVEL_ICONS[i]}</div>
+                <div className="text-base mb-1.5">{level.icon || LEVEL_ICONS[i]}</div>
                 <div className="font-orbitron text-[12px] text-white/35 mb-0.5">LVL {i + 1}</div>
                 <div className="font-orbitron text-[10px] font-bold text-white leading-tight">{level.name}</div>
-                <div className={`font-orbitron text-[12px] mt-1.5 ${DIFF_COLORS[i]}`}>{DIFFICULTY[i]}</div>
+                <div className={`font-orbitron text-[12px] mt-1.5 ${DIFF_COLORS[i] || 'text-red-400'}`}>{level.listedDiff || DIFFICULTY[i]}</div>
                 {selectedLevel === i && (
                   <motion.div
                     className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-violet-400"
@@ -243,7 +251,8 @@ export default function MainMenu({ onStartGame }) {
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
 
           {/* Selected level description */}
           <AnimatePresence mode="wait">
@@ -256,6 +265,11 @@ export default function MainMenu({ onStartGame }) {
               className="mt-3 px-4 py-2.5 rounded-xl border border-white/6 bg-white/3"
             >
               <div className="text-[11px] text-white/45 leading-relaxed">{selectedLvl.description}</div>
+              {selectedLvl.hint && (
+                <div className="text-[10px] mt-2 font-orbitron tracking-wide" style={{ color: 'rgba(167,139,250,0.75)' }}>
+                  {selectedLvl.hint}
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
         </motion.div>
