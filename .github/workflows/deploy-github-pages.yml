@@ -1,8 +1,9 @@
 name: Deploy GitHub Pages
 
+# GitHub Pages is not enabled on this repo yet (Settings → Pages → GitHub Actions).
+# Auto-deploy stays off so merges are not blocked. Re-enable the `push` trigger
+# after Pages is turned on, or run this workflow manually.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

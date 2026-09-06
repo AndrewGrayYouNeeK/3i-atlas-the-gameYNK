@@ -1,3 +1,0 @@
-# Cloudflare Pages — SPA fallback so /login, /register, /game keep working
-https://www.3iatlasgame.xyz/*  https://3iatlasgame.xyz/:splat  301
-/*    /index.html   200
