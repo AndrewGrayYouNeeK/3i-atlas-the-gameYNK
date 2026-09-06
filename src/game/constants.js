@@ -16,6 +16,12 @@ export const CRAFT = {
     designation: '3I/ATLAS',
     hudLabel: '3I / ATLAS',
     actLabel: 'ACT II · INFILTRATION',
+    trailColor: '210,185,155',
+    coreColor: '#7a5a48',
+    glowColor: '#c4a07a',
+    nucleusLight: '#e6d4c0',
+    ionColor: '150,195,255',
+    dustColor: '215,190,155',
   },
 };
 
@@ -66,7 +72,8 @@ export const LEVELS = [
     nebulaColor: 'rgba(0,30,60,0.2)',
     lore: "The scout watched the first fires, the first cities, the first satellites. It logged every dish pointed at the sky — and left before anyone could be sure it was looking back.",
     threatConfig: { probe: 1, satellite: 1, hunter: 0, deepSpace: 1, relay: 0 },
-    hint: "Arc behind the Moon. Even a 2017-era dish cannot scan through rock.",
+    requiredGases: ['methane'],
+    hint: "Optical lock. Vent methane (Q) or their cameras confirm you are not a rock.",
   },
   {
     id: 2,
@@ -87,7 +94,8 @@ export const LEVELS = [
     nebulaColor: 'rgba(20,40,90,0.18)',
     lore: "They argued for years about what 1I was. By the time the papers were published, the scout was already gone — and the next hull was already on its way.",
     threatConfig: { probe: 1, satellite: 1, hunter: 0, deepSpace: 1, relay: 0 },
-    hint: "Earth is behind you now. Do not turn back. Drift to the exit gate.",
+    requiredGases: ['ammonia'],
+    hint: "Exit dishes are radar-only. Jam them with ammonia (E) or the gate stays closed.",
   },
   {
     id: 3,
@@ -108,7 +116,8 @@ export const LEVELS = [
     nebulaColor: 'rgba(40,10,70,0.2)',
     lore: "3I/ATLAS is the follow-up hull. Same mind, new ice. Earth built more dishes after 'Oumuamua. The disguise has to be perfect this time.",
     threatConfig: { probe: 1, satellite: 1, hunter: 0, deepSpace: 1, relay: 1 },
-    hint: "Earth is watching from behind the sky. Bursting lights you up on their boards.",
+    requiredGases: ['methane'],
+    hint: "Earth's optical net is locked. You cannot ghost this dispatch without methane (Q).",
   },
   {
     id: 4,
@@ -129,7 +138,8 @@ export const LEVELS = [
     nebulaColor: 'rgba(60,20,100,0.2)',
     lore: "Atlas has posed as ice in 14 other star systems. The disguise works — until the hull moves like a ship against a planet Earth is already watching.",
     threatConfig: { probe: 1, satellite: 1, hunter: 0, deepSpace: 1, relay: 0 },
-    hint: 'Curve around Jupiter — use its mass as a shield against Earth\'s line of sight.',
+    requiredGases: ['ammonia'],
+    hint: "Juno-class radar sees through ice. Ammonia (E) is the only jam that opens the blind side.",
   },
   {
     id: 5,
@@ -150,7 +160,8 @@ export const LEVELS = [
     nebulaColor: 'rgba(80,20,20,0.2)',
     lore: "Humans found strange geometric patterns in Martian rock. They called it erosion. The scout carved them on the first pass — a waypoint for 3I.",
     threatConfig: { probe: 1, satellite: 1, hunter: 1, deepSpace: 1, relay: 0 },
-    hint: 'Real comets do not accelerate. Cut thrust — Earth and the dish both read propulsion.',
+    requiredGases: ['xenon'],
+    hint: "Heat lock. Xenon (R) is the only mask that fools the dish — shadow will not save you.",
   },
   {
     id: 6,
@@ -171,7 +182,8 @@ export const LEVELS = [
     nebulaColor: 'rgba(180,90,20,0.18)',
     lore: "Patience is the oldest weapon. The hull once hid in a gas giant's storm for 200 years. Earth does not have that long. You do.",
     threatConfig: { probe: 1, satellite: 2, hunter: 1, deepSpace: 0, relay: 1 },
-    hint: 'Fire Xenon as the relay arc rotates away. Heat is what Earth is hunting now.',
+    requiredGases: ['xenon'],
+    hint: "Inner Watch is a thermal cage. The gate will not open until you vent xenon (R) in the beam.",
   },
   {
     id: 7,
@@ -192,7 +204,8 @@ export const LEVELS = [
     nebulaColor: 'rgba(255,100,0,0.22)',
     lore: "The Sun is not the destination — it is the blind spot. They built their deepest sensors to watch the dark, not the light. Ghost them, and 3I was never here.",
     threatConfig: { probe: 2, satellite: 2, hunter: 1, deepSpace: 2, relay: 1 },
-    hint: 'Collect energy orbs for combo multipliers. Xenon → Ammonia → Methane — then drift.',
+    requiredGases: ['xenon', 'ammonia', 'methane'],
+    hint: "All three cloaks. Vent xenon, ammonia, then methane — the Ghost Gate stays shut until each is used.",
   },
 ];
 
@@ -324,7 +337,7 @@ export const EYES = {
 };
 
 export const SKINS = [
-  { id: 'default', name: 'ICY ATLAS', desc: 'The original comet form', price: 0, unlockType: 'free', coreColor: '#ddeeff', glowColor: '#8877bb', trailColor: '180,210,255', nucleusLight: '#d8cfc0' },
+  { id: 'default', name: 'ICY ATLAS', desc: 'Dirty ice nucleus, dust + ion tails', price: 0, unlockType: 'free', coreColor: '#8b6b55', glowColor: '#c9a882', trailColor: '210,185,155', nucleusLight: '#ead8c4' },
   { id: 'fire_comet', name: 'FIRE COMET', desc: 'Orange/red trail with ember particles', price: 0.99, priceId: 'price_skin_fire_comet', unlockType: 'stripe', coreColor: '#ff6622', glowColor: '#ff3300', trailColor: '255,100,20', nucleusLight: '#ff9955' },
   { id: 'dark_matter', name: 'DARK MATTER', desc: 'Black body, purple glow, distortion effect', price: 1.99, priceId: 'price_skin_dark_matter', unlockType: 'stripe', coreColor: '#110022', glowColor: '#9900ff', trailColor: '180,0,255', nucleusLight: '#440066' },
   { id: 'neon_ghost', name: 'NEON GHOST', desc: 'Transparent body, electric blue outline, ghost trail', price: 2.99, priceId: 'price_skin_neon_ghost', unlockType: 'stripe', coreColor: '#001133', glowColor: '#00aaff', trailColor: '0,200,255', nucleusLight: '#003366' },

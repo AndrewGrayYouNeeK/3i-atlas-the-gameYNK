@@ -81,6 +81,8 @@ export class GameEngine {
     // Gas supplies (limited charges)
     this.gasActive = null;
     this.gasTimer = 0;
+    this.usedGases = new Set();
+    this.gateBlocked = false;
     this.gasCooldowns = { methane: 0, ammonia: 0, xenon: 0 };
     // Gas charges by difficulty: easy=5, medium=3, hard=2
     const gasCount = this.difficulty.id === 'easy' ? 5 : this.difficulty.id === 'hard' ? 2 : 3;
@@ -407,6 +409,11 @@ export class GameEngine {
         add(types[i % types.length] || 'probe', 1);
       }
     }
+    const req = this.level.requiredGases || [];
+    const detectToGas = { visual: 'methane', radar: 'ammonia', heat: 'xenon' };
+    for (const t of threats) {
+      t.mustCloak = this.difficulty.id !== 'easy' && t.detects.some((d) => req.includes(detectToGas[d]));
+    }
     return threats;
   }
 
@@ -425,13 +432,28 @@ export class GameEngine {
   }
 
   _generateStealthObjectives() {
-    if (this.difficulty.id !== 'hard') return [];
+    const marks = [];
+    const gasLabels = {
+      methane: 'Vent methane (Q) — optical cloak',
+      ammonia: 'Vent ammonia (E) — radar jam',
+      xenon: 'Vent xenon (R) — heat mask',
+    };
+    for (const g of this.level.requiredGases || []) {
+      marks.push({
+        id: `gas-${g}`,
+        virtual: true,
+        gasId: g,
+        done: false,
+        pulseT: 0,
+        text: gasLabels[g] || `Vent ${g}`,
+      });
+    }
+    if (this.difficulty.id !== 'hard') return marks;
     const W = this.worldWidth;
     const planet = this.gravityWells[0];
     const moon = this.gravityWells[1];
     const rock = this.gravityWells[2];
     const dest = this.destination;
-    const marks = [];
     if (planet) {
       marks.push({
         id: 'shadow',
@@ -716,7 +738,7 @@ export class GameEngine {
         const inArc = threat.scanArc >= Math.PI * 1.9 || angleDiff < threat.scanArc / 2;
 
         let detected = inArc;
-        if (detected && this._lineHitsBody(threat.x, threat.y, atlas.x, atlas.y)) detected = false;
+        if (detected && !threat.mustCloak && this._lineHitsBody(threat.x, threat.y, atlas.x, atlas.y)) detected = false;
         // Gas countermeasures
         if (this.gasActive === 'ammonia' && threat.detects.includes('radar')) detected = false;
         if (this.gasActive === 'methane' && threat.detects.includes('visual')) detected = false;
@@ -812,7 +834,7 @@ export class GameEngine {
 
     this.inShadow = this.threats.some((threat) => {
       const dist = Math.hypot(this.atlas.x - threat.x, this.atlas.y - threat.y);
-      return dist < threat.scanRadius && this._lineHitsBody(threat.x, threat.y, this.atlas.x, this.atlas.y);
+      return dist < threat.scanRadius && !threat.mustCloak && this._lineHitsBody(threat.x, threat.y, this.atlas.x, this.atlas.y);
     });
 
     for (const threat of this.threats) {
@@ -894,6 +916,7 @@ export class GameEngine {
     for (const obj of this.objectives) {
       if (obj.done) continue;
       obj.pulseT += 0.04;
+      if (obj.virtual) continue;
       const dx = this.atlas.x - obj.x;
       const dy = this.atlas.y - obj.y;
       if (Math.sqrt(dx * dx + dy * dy) < obj.radius + 8) {
@@ -930,10 +953,14 @@ export class GameEngine {
 
     // Win: reach the gravitational anchor destination
     const dest = this.destination;
-    if (this.difficulty.id === 'hard' && this.objectives.some((o) => !o.done)) return;
+    const missingGases = (this.level.requiredGases || []).filter((g) => !this.usedGases.has(g));
+    const spatialOpen = this.difficulty.id !== 'hard' || this.objectives.every((o) => o.virtual || o.done);
     const dx = dest.x - this.atlas.x;
     const dy = dest.y - this.atlas.y;
-    if (Math.sqrt(dx * dx + dy * dy) < dest.captureRadius) {
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    this.gateBlocked = missingGases.length > 0 && dist < dest.captureRadius * 2.4;
+    if (!spatialOpen || missingGases.length) return;
+    if (dist < dest.captureRadius) {
       this.levelComplete = true;
       const stealthBonus = Math.round((1 - this.detection / 100) * 5000);
       const comboBonus = Math.round(this.stealthCombo * 40 * this.comboMultiplier);
@@ -955,8 +982,17 @@ export class GameEngine {
     }
     this.gasActive = gasId;
     this.gasCharges[gasId]--;
+    this.usedGases.add(gasId);
     const durations = { methane: 6, ammonia: 5, xenon: 8 };
     this.gasTimer = durations[gasId];
+    let objChanged = false;
+    for (const obj of this.objectives) {
+      if (obj.gasId === gasId && !obj.done) {
+        obj.done = true;
+        objChanged = true;
+      }
+    }
+    if (objChanged && this.onObjectiveUpdate) this.onObjectiveUpdate(this.objectives);
     if (this.onGasChange) this.onGasChange(gasId, this.gasCooldowns, this.gasCharges);
   }
 
@@ -1920,7 +1956,7 @@ export class GameEngine {
 
   _drawStealthObjectives(ctx, t) {
     for (const obj of this.objectives) {
-      if (obj.done) continue;
+      if (obj.done || obj.virtual) continue;
       const pulse = 0.55 + 0.45 * Math.sin((obj.pulseT || 0) + t * 0.004);
       ctx.save();
       ctx.translate(obj.x, obj.y);
@@ -2118,25 +2154,26 @@ export class GameEngine {
     const a = this.atlas;
     const trail = a.trail;
     const vel = Math.sqrt(a.vx ** 2 + a.vy ** 2);
-    const gasColors = { methane: '80,255,180', ammonia: '255,210,80', xenon: '200,140,255' };
-    const isGas = !!this.gasActive;
-    const dustColBase = isGas ? gasColors[this.gasActive] : '200,220,255';
+    const gasColors = { methane: '90,200,150', ammonia: '210,190,110', xenon: '170,150,210' };
+    const dustCol = this.gasActive ? gasColors[this.gasActive] : (this.craft.dustColor || this.skin.trailColor || '215,190,155');
+    const ionCol = this.craft.ionColor || '150,195,255';
     const spd = Math.max(vel, 0.5);
     const tailX = Math.abs(a.vx) + Math.abs(a.vy) < 0.2 ? -1 : -a.vx / spd;
     const tailY = Math.abs(a.vx) + Math.abs(a.vy) < 0.2 ? 0 : -a.vy / spd;
-    const skinTrail = this.skin.trailColor;
+    const perpX = -tailY;
+    const perpY = tailX;
+    const skinTrail = dustCol;
     const pulse = 0.5 + 0.5 * Math.sin(t * 0.004);
+    const dustColBase = dustCol;
 
-    // ── GHOST TRAIL ───────────────────────────────────────────────────────────
     if (this.ghostTrail.length > 1) {
       ctx.save();
       for (let i = 0; i < this.ghostTrail.length; i++) {
         const g = this.ghostTrail[i];
         const frac = i / this.ghostTrail.length;
-        const alpha = frac * 0.45;
-        const r = frac * 20;
+        const r = frac * 14;
         const ghostG = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, r);
-        ghostG.addColorStop(0, `rgba(${skinTrail},${alpha})`);
+        ghostG.addColorStop(0, `rgba(${skinTrail},${frac * 0.18})`);
         ghostG.addColorStop(1, 'transparent');
         ctx.fillStyle = ghostG;
         ctx.beginPath();
@@ -2146,41 +2183,20 @@ export class GameEngine {
       ctx.restore();
     }
 
-    // ── WIDE OUTER ION TAIL — speed-reactive length ───────────────────────────
     ctx.save();
-    const ionLen = 120 + vel * 20;
-    const ionParticles = 200;
-    for (let i = 0; i < ionParticles; i++) {
-      const frac = i / ionParticles;
-      const wobble = Math.sin(frac * 14 + t * 0.008) * (frac * 3);
-      const perpX2 = -tailY, perpY2 = tailX;
-      const alpha = (1 - frac) * (0.9 - frac * 0.3);
-      const px = a.x + tailX * ionLen * frac + perpX2 * wobble;
-      const py = a.y + tailY * ionLen * frac + perpY2 * wobble;
-      const r = Math.max(0.4, (1 - frac) * 3.5);
+    const dustLen = 90 + vel * 14;
+    for (let i = 0; i < 90; i++) {
+      const frac = i / 90;
+      const curve = Math.sin(frac * 1.4) * frac * 18 + Math.sin(frac * 9 + t * 0.003) * frac * 2.2;
+      const px = a.x + tailX * dustLen * frac + perpX * curve;
+      const py = a.y + tailY * dustLen * frac + perpY * curve;
       ctx.beginPath();
-      ctx.arc(px, py, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${skinTrail},${alpha})`;
-      ctx.shadowColor = `rgba(${skinTrail},0.6)`;
-      ctx.shadowBlur = 6;
+      ctx.arc(px, py, (1 - frac) * 7 + frac * 2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${dustCol},${(1 - frac) * 0.16})`;
       ctx.fill();
     }
-    // Bright glowing core streak
-    const ionCoreGrad = ctx.createLinearGradient(a.x, a.y, a.x + tailX * ionLen * 0.5, a.y + tailY * ionLen * 0.5);
-    ionCoreGrad.addColorStop(0, 'rgba(255,255,255,0.95)');
-    ionCoreGrad.addColorStop(0.3, `rgba(${skinTrail},0.7)`);
-    ionCoreGrad.addColorStop(1, 'transparent');
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(a.x + tailX * ionLen * 0.5, a.y + tailY * ionLen * 0.5);
-    ctx.strokeStyle = ionCoreGrad;
-    ctx.lineWidth = 2.5;
-    ctx.shadowColor = 'rgba(255,255,255,0.9)';
-    ctx.shadowBlur = 14;
-    ctx.stroke();
     ctx.restore();
 
-    // ── DUST TRAIL — path-following streaks ───────────────────────────────────
     if (trail.length >= 4) {
       ctx.save();
       ctx.lineCap = 'round';
@@ -2189,44 +2205,44 @@ export class GameEngine {
         ctx.beginPath();
         ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
         ctx.lineTo(trail[i].x, trail[i].y);
-        ctx.strokeStyle = `rgba(${dustColBase},${prog * 0.65})`;
-        ctx.lineWidth = prog * 5;
-        ctx.shadowColor = `rgba(${dustColBase},0.4)`;
-        ctx.shadowBlur = prog * 6;
+        ctx.strokeStyle = `rgba(${dustColBase},${prog * 0.28})`;
+        ctx.lineWidth = prog * 7;
         ctx.stroke();
       }
       ctx.restore();
     }
 
-    // ── COMA — 3-layer halo ───────────────────────────────────────────────────
     ctx.save();
-    const comaR = 38;
-    // Outermost diffuse halo
-    const comaOuter = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, comaR * 3);
-    comaOuter.addColorStop(0, `rgba(${skinTrail},0.12)`);
-    comaOuter.addColorStop(0.5, `rgba(${skinTrail},0.05)`);
+    const ionLen = 130 + vel * 18;
+    for (let i = 0; i < 70; i++) {
+      const frac = i / 70;
+      const wobble = Math.sin(frac * 11 + t * 0.01) * frac * 1.4;
+      const px = a.x + perpX * 4 + tailX * ionLen * frac + perpX * wobble;
+      const py = a.y + perpY * 4 + tailY * ionLen * frac + perpY * wobble;
+      ctx.beginPath();
+      ctx.arc(px, py, Math.max(0.3, (1 - frac) * 1.6), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${ionCol},${(1 - frac) * 0.38})`;
+      ctx.fill();
+    }
+    const ionGrad = ctx.createLinearGradient(a.x, a.y, a.x + tailX * ionLen * 0.55, a.y + tailY * ionLen * 0.55);
+    ionGrad.addColorStop(0, `rgba(${ionCol},0.45)`);
+    ionGrad.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(a.x + tailX * ionLen * 0.55, a.y + tailY * ionLen * 0.55);
+    ctx.strokeStyle = ionGrad;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    const comaOuter = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 52);
+    comaOuter.addColorStop(0, `rgba(${dustCol},${0.18 + pulse * 0.04})`);
+    comaOuter.addColorStop(0.45, `rgba(${dustCol},0.07)`);
     comaOuter.addColorStop(1, 'transparent');
     ctx.fillStyle = comaOuter;
     ctx.beginPath();
-    ctx.arc(a.x, a.y, comaR * 3, 0, Math.PI * 2);
-    ctx.fill();
-    // Mid halo
-    const comaMid = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, comaR * 1.6);
-    comaMid.addColorStop(0, 'rgba(220,240,255,0.30)');
-    comaMid.addColorStop(0.5, `rgba(${skinTrail},0.18)`);
-    comaMid.addColorStop(1, 'transparent');
-    ctx.fillStyle = comaMid;
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, comaR * 1.6, 0, Math.PI * 2);
-    ctx.fill();
-    // Inner bright core halo
-    const comaInner = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, comaR * 0.7);
-    comaInner.addColorStop(0, `rgba(255,255,255,${0.55 + pulse * 0.15})`);
-    comaInner.addColorStop(0.4, `rgba(${skinTrail},0.40)`);
-    comaInner.addColorStop(1, 'transparent');
-    ctx.fillStyle = comaInner;
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, comaR * 0.7, 0, Math.PI * 2);
+    ctx.arc(a.x, a.y, 52, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -2274,44 +2290,37 @@ export class GameEngine {
     }
     const { x, y, nucleusAngle } = this.atlas;
     const pulse = 0.5 + 0.5 * Math.sin(t * 0.004);
-    const vel = Math.sqrt(this.atlas.vx ** 2 + this.atlas.vy ** 2);
-
     const skin = this.skin;
-    // ── WIDE COMA / OUTER BLOOM ───────────────────────────────────────────────
+    const dustCol = this.craft.dustColor || skin.trailColor || '215,190,155';
+    const vel2 = Math.sqrt(this.atlas.vx ** 2 + this.atlas.vy ** 2) || 0.01;
+
     ctx.save();
-    const comaG = ctx.createRadialGradient(x, y, 0, x, y, 72);
-    comaG.addColorStop(0, `rgba(${skin.trailColor},0.38)`);
-    comaG.addColorStop(0.3, `rgba(${skin.trailColor},0.18)`);
-    comaG.addColorStop(0.65, `rgba(${skin.trailColor},0.07)`);
+    const comaG = ctx.createRadialGradient(x, y, 0, x, y, 36);
+    comaG.addColorStop(0, `rgba(${dustCol},0.28)`);
+    comaG.addColorStop(0.45, `rgba(${dustCol},0.08)`);
     comaG.addColorStop(1, 'transparent');
     ctx.fillStyle = comaG;
     ctx.beginPath();
-    ctx.arc(x, y, 72, 0, Math.PI * 2);
+    ctx.arc(x, y, 36, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // ── SUBLIMATION JETS — 5 jets, speed-reactive ────────────────────────────
     ctx.save();
     ctx.translate(x, y);
-    const vel2 = Math.sqrt(this.atlas.vx ** 2 + this.atlas.vy ** 2) || 0.01;
     const jetAngle = Math.atan2(-this.atlas.vy / vel2, -this.atlas.vx / vel2);
-    const jetCount = 5;
-    for (let j = 0; j < jetCount; j++) {
-      const spread = (j - Math.floor(jetCount / 2)) * 0.28;
+    for (let j = 0; j < 3; j++) {
+      const spread = (j - 1) * 0.22;
       const ja = jetAngle + spread;
-      const jetLen = 28 + pulse * 14 + vel2 * 6;
+      const jetLen = 12 + pulse * 5 + vel2 * 2.5;
       const jg = ctx.createLinearGradient(0, 0, Math.cos(ja) * jetLen, Math.sin(ja) * jetLen);
-      jg.addColorStop(0, `rgba(255,220,100,${0.9 + pulse * 0.1})`);
-      jg.addColorStop(0.25, `rgba(255,140,30,0.65)`);
-      jg.addColorStop(0.6, `rgba(255,80,10,0.25)`);
+      jg.addColorStop(0, `rgba(230,220,210,${0.28 + pulse * 0.08})`);
+      jg.addColorStop(0.5, `rgba(${dustCol},0.12)`);
       jg.addColorStop(1, 'transparent');
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(Math.cos(ja) * jetLen, Math.sin(ja) * jetLen);
       ctx.strokeStyle = jg;
-      ctx.lineWidth = j === Math.floor(jetCount / 2) ? 3.5 : 1.8;
-      ctx.shadowColor = 'rgba(255,180,50,1)';
-      ctx.shadowBlur = 18;
+      ctx.lineWidth = j === 1 ? 2.1 : 1.1;
       ctx.stroke();
     }
     ctx.restore();
@@ -2343,12 +2352,11 @@ export class GameEngine {
     nBody.addColorStop(1, skin.id === 'dark_matter' || skin.id === 'void_reaper' ? '#000000' : skin.coreColor);
     ctx.fillStyle = nBody;
     ctx.shadowColor = skin.glowColor;
-    ctx.shadowBlur = 28;
+    ctx.shadowBlur = skin.id === 'neon_ghost' ? 22 : 10;
     ctx.fill();
-    // Lit rim
-    ctx.strokeStyle = skin.id === 'neon_ghost' ? '#00eeff' : `rgba(255,230,160,0.35)`;
-    ctx.lineWidth = skin.id === 'neon_ghost' ? 2 : 1.2;
-    ctx.shadowBlur = skin.id === 'neon_ghost' ? 16 : 6;
+    ctx.strokeStyle = skin.id === 'neon_ghost' ? '#00eeff' : 'rgba(200,180,150,0.28)';
+    ctx.lineWidth = skin.id === 'neon_ghost' ? 2 : 1;
+    ctx.shadowBlur = skin.id === 'neon_ghost' ? 16 : 0;
     ctx.stroke();
 
     // Surface detail: craters + highlight
@@ -2384,16 +2392,13 @@ export class GameEngine {
 
     ctx.restore();
 
-    // ── BRIGHT INNER COMA GLOW ────────────────────────────────────────────────
     ctx.save();
-    const innerComa = ctx.createRadialGradient(x, y, 0, x, y, 28);
-    innerComa.addColorStop(0, `rgba(${skin.trailColor},${0.85 + pulse * 0.15})`);
-    innerComa.addColorStop(0.3, `rgba(${skin.trailColor},0.45)`);
-    innerComa.addColorStop(0.7, `rgba(${skin.trailColor},0.15)`);
+    const innerComa = ctx.createRadialGradient(x, y, 0, x, y, 16);
+    innerComa.addColorStop(0, `rgba(${dustCol},${0.22 + pulse * 0.08})`);
     innerComa.addColorStop(1, 'transparent');
     ctx.fillStyle = innerComa;
     ctx.beginPath();
-    ctx.arc(x, y, 28, 0, Math.PI * 2);
+    ctx.arc(x, y, 16, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -2428,6 +2433,8 @@ export class GameEngine {
     const dest = this.destination;
     const pulse = 0.5 + 0.5 * Math.sin(dest.pulseT);
     const R = dest.radius;
+    const locked = (this.level.requiredGases || []).some((g) => !this.usedGases.has(g));
+    const ring = locked ? '255,150,70' : '80,220,255';
 
     ctx.save();
     ctx.translate(dest.x, dest.y);
@@ -2438,7 +2445,7 @@ export class GameEngine {
       const alpha = (0.25 - i * 0.07) * (0.6 + pulse * 0.4);
       ctx.beginPath();
       ctx.arc(0, 0, ringR, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(80,220,255,${alpha})`;
+      ctx.strokeStyle = `rgba(${ring},${alpha})`;
       ctx.lineWidth = 1.2 - i * 0.3;
       ctx.setLineDash([6, 10]);
       ctx.stroke();
@@ -2449,12 +2456,12 @@ export class GameEngine {
     const rotA = t * 0.004;
     ctx.beginPath();
     ctx.arc(0, 0, dest.captureRadius, rotA, rotA + Math.PI * 1.5);
-    ctx.strokeStyle = `rgba(100,240,255,${0.4 + pulse * 0.3})`;
+    ctx.strokeStyle = `rgba(${ring},${0.4 + pulse * 0.3})`;
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.beginPath();
     ctx.arc(0, 0, dest.captureRadius, rotA + Math.PI, rotA + Math.PI * 2.5);
-    ctx.strokeStyle = `rgba(180,120,255,${0.3 + pulse * 0.25})`;
+    ctx.strokeStyle = `rgba(${locked ? '255,90,50' : '180,120,255'},${0.3 + pulse * 0.25})`;
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -2501,13 +2508,13 @@ export class GameEngine {
     ctx.restore();
 
     // Label
-    ctx.fillStyle = `rgba(140,230,255,${0.7 + pulse * 0.3})`;
+    ctx.fillStyle = locked ? `rgba(255,180,90,${0.8 + pulse * 0.2})` : `rgba(140,230,255,${0.7 + pulse * 0.3})`;
     ctx.font = 'bold 9px Orbitron, monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(this.level.destLabel || 'DESTINATION', dest.x, dest.y + R + 16);
+    ctx.fillText(locked ? 'GATE LOCKED' : (this.level.destLabel || 'DESTINATION'), dest.x, dest.y + R + 16);
     ctx.fillStyle = `rgba(255,255,255,0.4)`;
     ctx.font = '8px Orbitron, monospace';
-    ctx.fillText(this.level.destSub || 'SLINGSHOT IN', dest.x, dest.y + R + 26);
+    ctx.fillText(locked ? 'VENT REQUIRED GAS' : (this.level.destSub || 'SLINGSHOT IN'), dest.x, dest.y + R + 26);
 
     // Arrow guide from Atlas toward destination
     const dx = dest.x - this.atlas.x, dy = dest.y - this.atlas.y;

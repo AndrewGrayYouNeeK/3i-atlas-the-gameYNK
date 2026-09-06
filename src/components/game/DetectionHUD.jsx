@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Eye } from 'lucide-react';
 
-export default function DetectionHUD({ detection, score, level, comboMultiplier = 1, inShadow = false, craft, earthWatching = false }) {
+export default function DetectionHUD({ detection, score, level, comboMultiplier = 1, inShadow = false, craft, earthWatching = false, requiredGases = [], usedGases = [], gateBlocked = false }) {
   const safe = detection < 5;
   const low = detection < 20;
   const med = detection >= 20 && detection < 60;
@@ -21,8 +21,11 @@ export default function DetectionHUD({ detection, score, level, comboMultiplier 
   const statusText = safe ? 'SAFE' : low ? 'CAUTION' : med ? 'WARNING' : danger ? 'DANGER' : 'CRITICAL';
   const statusColor = safe ? '#34d399' : low ? '#34d399' : med ? '#fbbf24' : danger ? '#f97316' : '#f87171';
 
+  const missing = requiredGases.filter((g) => !usedGases.includes(g));
+
   return (
-    <div className="absolute left-3 right-3 flex items-start justify-between gap-3 pointer-events-none z-10" style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }}>
+    <div className="absolute left-3 right-3 flex flex-col items-stretch gap-2 pointer-events-none z-10" style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }}>
+    <div className="flex items-start justify-between gap-3">
 
       {/* Detection block */}
       <div
@@ -118,6 +121,18 @@ export default function DetectionHUD({ detection, score, level, comboMultiplier 
           </motion.div>
         )}
       </div>
+    </div>
+    {(missing.length > 0 || gateBlocked) && (
+      <div className="self-center px-3 py-1.5 rounded-xl backdrop-blur-md font-orbitron text-[10px] tracking-widest text-center"
+        style={{
+          background: gateBlocked ? 'rgba(80,20,10,0.82)' : 'rgba(5,5,18,0.7)',
+          border: `1px solid ${gateBlocked ? 'rgba(255,140,70,0.55)' : 'rgba(255,255,255,0.08)'}`,
+          color: gateBlocked ? '#ffb070' : 'rgba(255,255,255,0.55)',
+        }}
+      >
+        {gateBlocked ? `GATE LOCKED — VENT ${missing.join(' + ').toUpperCase()}` : `CLOAK: ${missing.join(' · ').toUpperCase()}`}
+      </div>
+    )}
     </div>
   );
 }

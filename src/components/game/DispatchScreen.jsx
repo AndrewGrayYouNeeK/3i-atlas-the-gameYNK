@@ -43,8 +43,8 @@ export default function DispatchScreen({ onContinue }) {
           <div
             className="w-12 h-12 rounded-full"
             style={{
-              background: 'radial-gradient(circle at 35% 35%, #ddeeff 0%, #7733bb 50%, #1a0030 100%)',
-              boxShadow: '0 0 40px rgba(150,80,255,0.7)',
+              background: 'radial-gradient(circle at 35% 32%, #ead8c4 0%, #8b6b55 42%, #3a281c 100%)',
+              boxShadow: '0 0 28px rgba(196,160,122,0.45)',
             }}
           />
         </motion.div>
