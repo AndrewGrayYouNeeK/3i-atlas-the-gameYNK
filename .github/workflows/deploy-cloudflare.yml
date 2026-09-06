@@ -30,9 +30,9 @@ jobs:
           SITE_DOMAIN: 3iatlasgame.xyz
         run: |
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::Missing CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN repo secrets."
-            echo "Add them in Settings → Secrets and variables → Actions, then re-run this workflow."
-            echo "Token permissions: Account.Workers Scripts Write, Zone.DNS Edit, Zone.Zone Read."
-            exit 1
+            echo "::notice::CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN are not set."
+            echo "Add them in Settings → Secrets and variables → Actions (Workers Scripts Write + Zone DNS Edit + Zone Read),"
+            echo "then re-run this workflow to publish https://3iatlasgame.xyz"
+            exit 0
           fi
           node scripts/deploy-cloudflare.mjs
