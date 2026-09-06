@@ -31,8 +31,7 @@ jobs:
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN is not set."
-            echo "Add it in Settings → Secrets and variables → Actions."
-            echo "The token needs Account.Workers Scripts Edit + Zone.DNS Edit + Zone.Zone Read."
+            echo "Use a token from the Cloudflare account that owns 3iatlasgame.xyz (not the youneek.xyz account)."
             exit 1
           fi
           node scripts/deploy-cloudflare.mjs

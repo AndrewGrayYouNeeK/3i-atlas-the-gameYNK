@@ -20,18 +20,15 @@ const DOMAIN = process.env.SITE_DOMAIN || '3iatlasgame.xyz';
 const WWW = `www.${DOMAIN}`;
 const API = 'https://api.cloudflare.com/client/v4';
 
-const WRONG_ACCOUNT = `${DOMAIN} is not in the Cloudflare account this token belongs to.
-The previous deploy went to Andrewgray@youneek.xyz's Account — that is the wrong one.
+const WRONG_ACCOUNT = `This GitHub token still belongs to the wrong Cloudflare account.
+${DOMAIN} is not visible to it.
 
-Fix:
-1. https://dash.cloudflare.com — top-left, switch accounts until Websites lists ${DOMAIN}
-2. Stay on that account. Copy Account ID from the right sidebar.
-3. Profile → API Tokens → Create Token → Edit Cloudflare Workers
-   Then add Zone → DNS → Edit and Zone → Zone → Read (Zone resources: All zones)
-4. GitHub → Settings → Secrets:
-   CLOUDFLARE_API_TOKEN  = the new token (from the domain's account)
-   CLOUDFLARE_ACCOUNT_ID = that account's ID (not 6b8b358d7780d34a3f941be39b4b28d6)
-5. Actions → Deploy Cloudflare Workers → Run workflow`;
+I cannot change GitHub secrets from here. On the account that lists ${DOMAIN} under Websites:
+  dash.cloudflare.com → switch account (top left) → 3iatlasgame.xyz must appear
+  Create Token (Edit Cloudflare Workers + Zone DNS Edit + Zone Read, All zones)
+  GitHub → Settings → Secrets → replace CLOUDFLARE_API_TOKEN
+  You can delete CLOUDFLARE_ACCOUNT_ID; deploy follows the zone's account automatically.
+Then: Actions → Deploy Cloudflare Workers → Run workflow`;
 
 let accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 
@@ -63,29 +60,35 @@ async function cf(path, { method = 'GET', body } = {}) {
 }
 
 async function resolveAccountId() {
+  let domainZones = [];
+  try {
+    domainZones = (await cf(`/zones?name=${encodeURIComponent(DOMAIN)}`)) || [];
+  } catch (err) {
+    console.warn(`Zone lookup for ${DOMAIN} failed: ${err.message}`);
+  }
+  if (domainZones.length) {
+    const zone = domainZones[0];
+    const id = zone.account?.id;
+    const name = zone.account?.name || zone.account?.id;
+    if (!id) die(`Zone ${DOMAIN} has no account id on it.`);
+    if (accountId && accountId !== id) {
+      console.warn(
+        `Ignoring stale CLOUDFLARE_ACCOUNT_ID=${accountId}; ${DOMAIN} is on ${name} (${id}).`,
+      );
+    }
+    console.log(`Deploy target: ${name} (${id}) because it owns ${DOMAIN}`);
+    return id;
+  }
+
   let accounts;
   try {
     accounts = (await cf('/accounts')) || [];
   } catch (err) {
-    die(`Could not list Cloudflare accounts with this token.\n${err.message}`);
+    die(`Could not list Cloudflare accounts with this token.\n${err.message}\n\n${WRONG_ACCOUNT}`);
   }
-  if (!accounts.length) die('This API token cannot see any Cloudflare accounts.');
-
-  console.log('Token can access:');
+  console.log('Token can access accounts:');
   for (const a of accounts) console.log(`  ${a.name}  ${a.id}`);
-
-  if (accountId && accounts.some((a) => a.id === accountId)) return accountId;
-  if (accountId) {
-    die(
-      `CLOUDFLARE_ACCOUNT_ID=${accountId} is not visible to this token. The token is for a different Cloudflare account.\n\n${WRONG_ACCOUNT}`,
-    );
-  }
-  if (accounts.length === 1) return accounts[0].id;
-  die(
-    `Token sees multiple accounts. Set CLOUDFLARE_ACCOUNT_ID to the account that owns ${DOMAIN}:\n${accounts
-      .map((a) => `  ${a.id}  ${a.name}`)
-      .join('\n')}`,
-  );
+  die(WRONG_ACCOUNT);
 }
 
 async function listVisibleZones() {
@@ -177,11 +180,8 @@ async function main() {
   const apex = await attachCustomDomain(DOMAIN);
   const www = await attachCustomDomain(WWW);
 
-  const workerUrl = 'https://3i-atlas-the-game.andrewgray-6b8.workers.dev';
   console.log(`
 ────────────────────────────────────────
-Worker is live: ${workerUrl}
-
   Apex:    ${apex ? `https://${DOMAIN}` : 'NOT ATTACHED'}
   WWW:     ${www ? `https://${WWW}` : 'NOT ATTACHED'}
 ────────────────────────────────────────
