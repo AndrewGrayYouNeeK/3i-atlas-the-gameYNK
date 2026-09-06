@@ -9,7 +9,7 @@ export class GameEngine {
 
   static preloadAssets() {
     if (GameEngine.PLANET_IMGS) return;
-    const BASE = 'https://raw.githubusercontent.com/AndrewGrayYouNeeK/3i-atlas-the-game/main';
+    const BASE = 'https://raw.githubusercontent.com/AndrewGrayYouNeeK/3i-atlas-the-gameYNK/main';
     const load = (src) => { const i = new Image(); i.crossOrigin='anonymous'; i.src=src; return i; };
     GameEngine.PLANET_IMGS = {
       0: load(BASE+'/src/assets/planets/planet_mercury.png'),
