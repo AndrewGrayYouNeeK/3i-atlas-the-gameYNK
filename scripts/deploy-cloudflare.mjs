@@ -20,15 +20,18 @@ const DOMAIN = process.env.SITE_DOMAIN || '3iatlasgame.xyz';
 const WWW = `www.${DOMAIN}`;
 const API = 'https://api.cloudflare.com/client/v4';
 
-const TOKEN_HELP = `The Worker is already live. To attach ${DOMAIN}, the API token must also see that zone.
+const WRONG_ACCOUNT = `${DOMAIN} is not in the Cloudflare account this token belongs to.
+The previous deploy went to Andrewgray@youneek.xyz's Account — that is the wrong one.
 
-Easiest: Cloudflare dashboard → Workers & Pages → ${PROJECT}
-  → Settings → Domains & Routes → Add → Custom Domain → ${DOMAIN}
-
-Or recreate the token with Zone resources = All zones (or Specific zone ${DOMAIN}):
-  Account → Workers Scripts → Edit
-  Zone    → DNS             → Edit
-  Zone    → Zone            → Read`;
+Fix:
+1. https://dash.cloudflare.com — top-left, switch accounts until Websites lists ${DOMAIN}
+2. Stay on that account. Copy Account ID from the right sidebar.
+3. Profile → API Tokens → Create Token → Edit Cloudflare Workers
+   Then add Zone → DNS → Edit and Zone → Zone → Read (Zone resources: All zones)
+4. GitHub → Settings → Secrets:
+   CLOUDFLARE_API_TOKEN  = the new token (from the domain's account)
+   CLOUDFLARE_ACCOUNT_ID = that account's ID (not 6b8b358d7780d34a3f941be39b4b28d6)
+5. Actions → Deploy Cloudflare Workers → Run workflow`;
 
 let accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 
@@ -73,13 +76,13 @@ async function resolveAccountId() {
 
   if (accountId && accounts.some((a) => a.id === accountId)) return accountId;
   if (accountId) {
-    console.warn(
-      `CLOUDFLARE_ACCOUNT_ID=${accountId} is not an account this token can use. Switching to ${accounts[0].id}.`,
+    die(
+      `CLOUDFLARE_ACCOUNT_ID=${accountId} is not visible to this token. The token is for a different Cloudflare account.\n\n${WRONG_ACCOUNT}`,
     );
   }
   if (accounts.length === 1) return accounts[0].id;
   die(
-    `Token sees multiple accounts. Set CLOUDFLARE_ACCOUNT_ID to one of:\n${accounts
+    `Token sees multiple accounts. Set CLOUDFLARE_ACCOUNT_ID to the account that owns ${DOMAIN}:\n${accounts
       .map((a) => `  ${a.id}  ${a.name}`)
       .join('\n')}`,
   );
@@ -152,6 +155,11 @@ async function main() {
   accountId = await resolveAccountId();
   console.log(`Using Cloudflare account ${accountId}`);
 
+  const zones = await listVisibleZones();
+  if (!zones.some((z) => z.name === DOMAIN)) {
+    die(WRONG_ACCOUNT);
+  }
+
   console.log(`\nDeploying dist/ to Worker ${PROJECT}…`);
   try {
     sh('npx wrangler deploy', {
@@ -180,7 +188,7 @@ Worker is live: ${workerUrl}
 `);
 
   if (!apex) {
-    die(`Game is deployed, but ${DOMAIN} could not be attached.\n\n${TOKEN_HELP}`);
+    die(`Game is deployed, but ${DOMAIN} could not be attached.\n\n${WRONG_ACCOUNT}`);
   }
 }
 
