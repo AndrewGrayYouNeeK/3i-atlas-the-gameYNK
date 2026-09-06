@@ -2228,6 +2228,13 @@ export class GameEngine {
     this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen * 1.12, 78, dust, 0.32);
     this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen, 46, '255,228,186', 0.22);
     this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen * 0.7, 22, '255,244,220', 0.16);
+    const tilt = 0.16;
+    const dX2 = dX * Math.cos(tilt) - dY * Math.sin(tilt);
+    const dY2 = dX * Math.sin(tilt) + dY * Math.cos(tilt);
+    const dX3 = dX * Math.cos(-tilt) - dY * Math.sin(-tilt);
+    const dY3 = dX * Math.sin(-tilt) + dY * Math.cos(-tilt);
+    this._drawSoftFan(ctx, a.x, a.y, dX2, dY2, -dY2, dX2, dustLen * 0.82, 28, dust, 0.12);
+    this._drawSoftFan(ctx, a.x, a.y, dX3, dY3, -dY3, dX3, dustLen * 0.74, 24, '236,214,176', 0.1);
 
     this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen, 16, ion, 0.36);
     this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen * 0.9, 7, '200,228,255', 0.28);
