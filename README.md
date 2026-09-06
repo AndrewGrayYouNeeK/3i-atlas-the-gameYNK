@@ -101,25 +101,25 @@ The app will be available at `http://localhost:5173`
 
 **Canonical domain:** [`https://3iatlasgame.xyz`](https://3iatlasgame.xyz)
 
-### Cloudflare Pages (recommended)
+The game is a static SPA on **Cloudflare Workers**. `3iatlasgame.xyz` is already a Cloudflare zone; attaching it as a Worker Custom Domain is what actually puts the game on that hostname.
 
-The repo deploys with Wrangler + the Cloudflare API via:
+### Cloudflare Workers (recommended)
 
 ```bash
 export CLOUDFLARE_ACCOUNT_ID=your_account_id
-export CLOUDFLARE_API_TOKEN=your_api_token   # Pages Edit + Zone DNS Edit
+export CLOUDFLARE_API_TOKEN=your_api_token   # Workers Scripts Write + Zone DNS Edit + Zone Read
 npm run deploy:cloudflare
 ```
 
 This will:
 1. Build `dist/`
-2. Create/update the Pages project `3i-atlas-the-game`
-3. Attach custom domains `3iatlasgame.xyz` and `www.3iatlasgame.xyz`
-4. Point zone DNS (proxied CNAMEs) at the Pages subdomain
+2. Deploy Worker `3i-atlas-the-game` (SPA fallback via `wrangler.jsonc`)
+3. Delete the looping apex A records that currently cause Cloudflare **Error 1000** (“DNS points to prohibited IP”)
+4. Attach custom domains `3iatlasgame.xyz` and `www.3iatlasgame.xyz`
 
-CI: add repo secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, then push to `main` (workflow `Deploy Cloudflare Pages`).
+CI: add repo secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, then push to `main` (workflow `Deploy Cloudflare Workers`). Re-run the workflow after adding secrets.
 
-**Security:** if the apex still shows “Just a moment…” / `cf-mitigated: challenge`, set Cloudflare **Security Level → Medium** and turn off Bot Fight / Under Attack mode for the zone.
+**If the apex still fails:** Cloudflare dashboard → `3iatlasgame.xyz` → **Security** → **Settings** → Security Level **Medium** (not “I’m Under Attack”), and turn off Bot Fight Mode if needed.
 
 ### GitHub Pages (optional fallback)
 
@@ -128,7 +128,7 @@ CI: add repo secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, then pu
 1. GitHub → **Settings** → **Pages** → Source **GitHub Actions**
 2. Custom domain: `3iatlasgame.xyz` (`public/CNAME` is already set)
 
-If DNS stays on Cloudflare for Pages, prefer the Cloudflare deploy path above.
+Prefer the Cloudflare Worker path above so DNS stays on Cloudflare.
 
 ### Supabase Auth
 
