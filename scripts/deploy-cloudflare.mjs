@@ -3,7 +3,7 @@
  * Build + deploy Atlas to Cloudflare Workers (static assets) and attach 3iatlasgame.xyz.
  *
  * Required env:
- *   CLOUDFLARE_API_TOKEN   (Workers Scripts Edit + Zone DNS Edit + Zone Read)
+ *   CLOUDFLARE_API_TOKEN   (Workers Scripts Edit; Zone DNS Edit to attach the domain)
  *
  * Optional:
  *   CLOUDFLARE_ACCOUNT_ID    (if omitted, uses the sole account the token can see)
@@ -20,23 +20,15 @@ const DOMAIN = process.env.SITE_DOMAIN || '3iatlasgame.xyz';
 const WWW = `www.${DOMAIN}`;
 const API = 'https://api.cloudflare.com/client/v4';
 
-const TOKEN_HELP = `Create a NEW API token (the current one cannot deploy Workers):
-  https://dash.cloudflare.com/profile/api-tokens
-  Create Token → Create Custom Token
+const WRONG_ACCOUNT = `This GitHub token still belongs to the wrong Cloudflare account.
+${DOMAIN} is not visible to it.
 
-Permissions (all three):
-  Account → Workers Scripts → Edit
-  Zone    → DNS             → Edit
-  Zone    → Zone            → Read
-
-Account resources: Include → Andrewgray@youneek.xyz's Account
-Zone resources:    Include → Specific zone → 3iatlasgame.xyz
-
-Then in GitHub → Settings → Secrets and variables → Actions:
-  CLOUDFLARE_API_TOKEN     = (the new token)
-  CLOUDFLARE_ACCOUNT_ID    = 6b8b358d7780d34a3f941be39b4b28d6
-
-Re-run Actions → Deploy Cloudflare Workers.`;
+I cannot change GitHub secrets from here. On the account that lists ${DOMAIN} under Websites:
+  dash.cloudflare.com → switch account (top left) → 3iatlasgame.xyz must appear
+  Create Token (Edit Cloudflare Workers + Zone DNS Edit + Zone Read, All zones)
+  GitHub → Settings → Secrets → replace CLOUDFLARE_API_TOKEN
+  You can delete CLOUDFLARE_ACCOUNT_ID; deploy follows the zone's account automatically.
+Then: Actions → Deploy Cloudflare Workers → Run workflow`;
 
 let accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 
@@ -68,87 +60,91 @@ async function cf(path, { method = 'GET', body } = {}) {
 }
 
 async function resolveAccountId() {
+  let domainZones = [];
+  try {
+    domainZones = (await cf(`/zones?name=${encodeURIComponent(DOMAIN)}`)) || [];
+  } catch (err) {
+    console.warn(`Zone lookup for ${DOMAIN} failed: ${err.message}`);
+  }
+  if (domainZones.length) {
+    const zone = domainZones[0];
+    const id = zone.account?.id;
+    const name = zone.account?.name || zone.account?.id;
+    if (!id) die(`Zone ${DOMAIN} has no account id on it.`);
+    if (accountId && accountId !== id) {
+      console.warn(
+        `Ignoring stale CLOUDFLARE_ACCOUNT_ID=${accountId}; ${DOMAIN} is on ${name} (${id}).`,
+      );
+    }
+    console.log(`Deploy target: ${name} (${id}) because it owns ${DOMAIN}`);
+    return id;
+  }
+
   let accounts;
   try {
     accounts = (await cf('/accounts')) || [];
   } catch (err) {
-    die(`Could not list Cloudflare accounts with this token.\n${err.message}\n\n${TOKEN_HELP}`);
+    die(`Could not list Cloudflare accounts with this token.\n${err.message}\n\n${WRONG_ACCOUNT}`);
   }
-  if (!accounts.length) die(`This API token cannot see any Cloudflare accounts.\n\n${TOKEN_HELP}`);
-
-  console.log('Token can access:');
+  console.log('Token can access accounts:');
   for (const a of accounts) console.log(`  ${a.name}  ${a.id}`);
-
-  if (accountId && accounts.some((a) => a.id === accountId)) return accountId;
-  if (accountId) {
-    console.warn(
-      `CLOUDFLARE_ACCOUNT_ID=${accountId} is not an account this token can use. Switching to ${accounts[0].id}.`,
-    );
-  }
-  if (accounts.length === 1) return accounts[0].id;
-  die(
-    `Token sees multiple accounts. Set CLOUDFLARE_ACCOUNT_ID to one of:\n${accounts
-      .map((a) => `  ${a.id}  ${a.name}`)
-      .join('\n')}`,
-  );
+  die(WRONG_ACCOUNT);
 }
 
-async function findZoneId(hostname) {
-  const zones = await cf(`/zones?name=${encodeURIComponent(hostname)}`);
-  if (!zones?.length) {
-    die(
-      `No Cloudflare zone found for ${hostname} with this token.\nAdd Zone → Zone → Read and Zone → DNS → Edit for ${hostname}.\n\n${TOKEN_HELP}`,
-    );
-  }
-  return zones[0].id;
-}
-
-async function clearConflictingDns(zoneId, name) {
-  const list = await cf(`/zones/${zoneId}/dns_records?name=${encodeURIComponent(name)}`);
-  for (const rec of list || []) {
-    if (['A', 'AAAA', 'CNAME'].includes(rec.type)) {
-      console.log(`Deleting conflicting DNS ${rec.type} ${rec.name} → ${rec.content}`);
-      await cf(`/zones/${zoneId}/dns_records/${rec.id}`, { method: 'DELETE' });
-    }
-  }
-}
-
-async function listWorkerDomains() {
+async function listVisibleZones() {
   try {
-    return (await cf(`/accounts/${accountId}/workers/domains`)) || [];
+    const zones = (await cf(`/zones?per_page=50&account.id=${accountId}`)) || [];
+    console.log(`Zones this token can see (${zones.length}):`);
+    for (const z of zones) console.log(`  ${z.name}  ${z.status}`);
+    return zones;
   } catch (err) {
-    console.warn(`Could not list Worker domains: ${err.message}`);
+    console.warn(`Could not list zones: ${err.message}`);
     return [];
   }
 }
 
-async function ensureCustomDomain(hostname, zoneId) {
-  const existing = (await listWorkerDomains()).find(
-    (d) => d.hostname === hostname && d.service === PROJECT,
-  );
-  if (existing) {
-    console.log(`Custom domain already attached: ${hostname} (${existing.id})`);
-    return existing;
+async function attachCustomDomain(hostname) {
+  let existing = [];
+  try {
+    existing = (await cf(`/accounts/${accountId}/workers/domains`)) || [];
+  } catch (err) {
+    console.warn(`Could not list Worker domains: ${err.message}`);
+  }
+  const already = existing.find((d) => d.hostname === hostname && d.service === PROJECT);
+  if (already) {
+    console.log(`Custom domain already attached: ${hostname}`);
+    return already;
   }
 
-  await clearConflictingDns(zoneId, hostname);
-
   console.log(`Attaching custom domain ${hostname} → Worker ${PROJECT}…`);
-  const attached = await cf(`/accounts/${accountId}/workers/domains`, {
-    method: 'PUT',
-    body: {
-      hostname,
-      service: PROJECT,
-      zone_id: zoneId,
-      zone_name: DOMAIN,
-    },
-  });
-  console.log(`Attached: ${hostname} (${attached.id || attached.hostname})`);
-  return attached;
+  try {
+    const attached = await cf(`/accounts/${accountId}/workers/domains`, {
+      method: 'PUT',
+      body: { hostname, service: PROJECT },
+    });
+    console.log(`Attached: ${hostname} (${attached.id || attached.hostname})`);
+    return attached;
+  } catch (err) {
+    console.warn(`API attach failed: ${err.message}`);
+  }
+
+  try {
+    sh(`npx wrangler deploy --domain ${hostname}`, {
+      env: {
+        ...process.env,
+        CLOUDFLARE_ACCOUNT_ID: accountId,
+        CLOUDFLARE_API_TOKEN: TOKEN,
+      },
+    });
+    return { hostname };
+  } catch (err) {
+    console.warn(`wrangler --domain ${hostname} failed`);
+    return null;
+  }
 }
 
 async function main() {
-  if (!TOKEN) die(`CLOUDFLARE_API_TOKEN is required.\n\n${TOKEN_HELP}`);
+  if (!TOKEN) die('CLOUDFLARE_API_TOKEN is required.');
 
   if (process.env.SKIP_BUILD !== '1') {
     if (!existsSync('.env.production') && existsSync('.env.example')) {
@@ -162,6 +158,11 @@ async function main() {
   accountId = await resolveAccountId();
   console.log(`Using Cloudflare account ${accountId}`);
 
+  const zones = await listVisibleZones();
+  if (!zones.some((z) => z.name === DOMAIN)) {
+    die(WRONG_ACCOUNT);
+  }
+
   console.log(`\nDeploying dist/ to Worker ${PROJECT}…`);
   try {
     sh('npx wrangler deploy', {
@@ -172,24 +173,23 @@ async function main() {
       },
     });
   } catch {
-    die(`wrangler deploy failed (Cloudflare code 10000 = token missing Workers Scripts Edit).\n\n${TOKEN_HELP}`);
+    die('wrangler deploy failed. Token needs Account → Workers Scripts → Edit.');
   }
 
-  const zoneId = await findZoneId(DOMAIN);
-  await ensureCustomDomain(DOMAIN, zoneId);
-  await ensureCustomDomain(WWW, zoneId);
+  await listVisibleZones();
+  const apex = await attachCustomDomain(DOMAIN);
+  const www = await attachCustomDomain(WWW);
 
   console.log(`
 ────────────────────────────────────────
-Deployed.
-
-  Apex:    https://${DOMAIN}
-  WWW:     https://${WWW}
-
-If the apex still shows a Cloudflare challenge:
-  ${DOMAIN} → Security → Settings → Security Level = Medium
+  Apex:    ${apex ? `https://${DOMAIN}` : 'NOT ATTACHED'}
+  WWW:     ${www ? `https://${WWW}` : 'NOT ATTACHED'}
 ────────────────────────────────────────
 `);
+
+  if (!apex) {
+    die(`Game is deployed, but ${DOMAIN} could not be attached.\n\n${WRONG_ACCOUNT}`);
+  }
 }
 
 main().catch((err) => {
