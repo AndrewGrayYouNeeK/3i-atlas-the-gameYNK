@@ -29,10 +29,10 @@ jobs:
           CLOUDFLARE_PROJECT_NAME: 3i-atlas-the-game
           SITE_DOMAIN: 3iatlasgame.xyz
         run: |
-          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::notice::CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN are not set."
-            echo "Add them in Settings → Secrets and variables → Actions (Workers Scripts Write + Zone DNS Edit + Zone Read),"
-            echo "then re-run this workflow to publish https://3iatlasgame.xyz"
-            exit 0
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is not set."
+            echo "Add it in Settings → Secrets and variables → Actions."
+            echo "The token needs Account.Workers Scripts Edit + Zone.DNS Edit + Zone.Zone Read."
+            exit 1
           fi
           node scripts/deploy-cloudflare.mjs
