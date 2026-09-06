@@ -7,7 +7,7 @@ const GAS_STYLES = {
   xenon:   { accent: '#c084fc', bg: 'rgba(192,132,252,0.18)', border: 'rgba(192,132,252,0.5)', glow: 'rgba(192,132,252,0.4)' },
 };
 
-export default function GasSelector({ activeGas, cooldowns, charges, onActivate }) {
+export default function GasSelector({ activeGas, cooldowns, charges, onActivate, requiredGases = [], usedGases = [] }) {
   const gasList = Object.values(GASES);
 
   return (
@@ -23,6 +23,8 @@ export default function GasSelector({ activeGas, cooldowns, charges, onActivate 
         const onCooldown = cd > 0;
         const unavailable = depleted || (onCooldown && !isActive);
         const s = GAS_STYLES[gas.id];
+        const required = requiredGases.includes(gas.id);
+        const used = usedGases.includes(gas.id);
 
         return (
           <motion.button
@@ -33,8 +35,12 @@ export default function GasSelector({ activeGas, cooldowns, charges, onActivate 
             className="relative min-w-[44px] min-h-[44px] w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 pointer-events-auto outline-none select-none"
             style={{
               background: isActive ? s.bg : 'rgba(5,5,18,0.78)',
-              border: `2px solid ${isActive ? s.border : 'rgba(255,255,255,0.1)'}`,
-              boxShadow: isActive ? `0 0 18px ${s.glow}, 0 4px 16px rgba(0,0,0,0.5)` : '0 2px 12px rgba(0,0,0,0.5)',
+              border: `2px solid ${isActive ? s.border : required && !used ? s.accent : 'rgba(255,255,255,0.1)'}`,
+              boxShadow: isActive
+                ? `0 0 18px ${s.glow}, 0 4px 16px rgba(0,0,0,0.5)`
+                : required && !used
+                  ? `0 0 12px ${s.glow}`
+                  : '0 2px 12px rgba(0,0,0,0.5)',
               backdropFilter: 'blur(10px)',
               opacity: unavailable ? 0.35 : 1,
               touchAction: 'manipulation',
@@ -54,7 +60,10 @@ export default function GasSelector({ activeGas, cooldowns, charges, onActivate 
               )}
             </AnimatePresence>
 
-            {/* Symbol */}
+            {required && !used && (
+              <span className="absolute -top-1 -right-1 font-orbitron text-[8px] px-1 rounded"
+                style={{ background: s.accent, color: '#050512' }}>REQ</span>
+            )}
             <span className="font-orbitron text-[11px] font-bold leading-none" style={{ color: isActive ? s.accent : 'rgba(255,255,255,0.8)' }}>
               {gas.symbol}
             </span>

@@ -34,6 +34,9 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
     setInShadow(false);
     setObjectives([]);
     setActiveGas(null);
+    setUsedGases([]);
+    setGateBlocked(false);
+    setCloakMiss(null);
     setPostRunStats(null);
     setPaused(false);
     setState('playing');
@@ -47,6 +50,9 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
   const [objectives, setObjectives] = useState([]);
   const [postRunStats, setPostRunStats] = useState(null);
   const [activeGas, setActiveGas] = useState(null);
+  const [usedGases, setUsedGases] = useState([]);
+  const [gateBlocked, setGateBlocked] = useState(false);
+  const [cloakMiss, setCloakMiss] = useState(null);
   const [gasCooldowns, setGasCooldowns] = useState({});
   const [activeEye, setActiveEye] = useState(null);
   const [mythCooldown, setMythCooldown] = useState(0);
@@ -77,6 +83,9 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
       setActiveEye(eng.atlas?.eyeMode || null);
       setMythCooldown(eng.mythCooldown || 0);
       setInShadow(Boolean(eng.inShadow));
+      setUsedGases([...eng.usedGases]);
+      setGateBlocked(Boolean(eng.gateBlocked));
+      setCloakMiss(eng.cloakMiss || null);
     }, 100);
     return () => clearInterval(interval);
   }, [gameKey]);
@@ -261,10 +270,25 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
               inShadow={inShadow}
               craft={getCraft(LEVELS[levelId])}
               earthWatching={LEVELS[levelId]?.earthBackdrop === 'watching'}
+              requiredGases={LEVELS[levelId]?.requiredGases || []}
+              usedGases={usedGases}
+              gateBlocked={gateBlocked}
+              cloakMiss={cloakMiss}
             />
             <ObjectivesPanel objectives={objectives} levelName={LEVELS[levelId]?.name} />
             <div className="pointer-events-auto">
-              <GasSelector activeGas={activeGas} cooldowns={gasCooldowns} charges={gasCharges} onActivate={activateGas} />
+              <GasSelector
+                activeGas={activeGas}
+                cooldowns={gasCooldowns}
+                charges={gasCharges}
+                onActivate={activateGas}
+                requiredGases={
+                  LEVELS[levelId]?.gasOrder
+                    ? [(LEVELS[levelId].requiredGases || []).find((g) => !usedGases.includes(g))].filter(Boolean)
+                    : (LEVELS[levelId]?.requiredGases || [])
+                }
+                usedGases={usedGases}
+              />
               <EyePanel activeEye={activeEye} mythCooldown={mythCooldown} onActivate={activateEye} />
               <SpeedControl speed={speed} onBurst={handleBurst} onSlow={handleSlow} />
             </div>
