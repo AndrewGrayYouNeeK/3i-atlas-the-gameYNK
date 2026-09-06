@@ -65,7 +65,7 @@ export class GameEngine {
 
     // Comet (Atlas) state — starts at LEFT edge (outer solar system), flies RIGHT toward the Sun
     this.atlas = {
-      x: canvas.width * 0.04,
+      x: canvas.width * 0.16,
       y: canvas.height * 0.5,
       vx: 0.8 * this.difficulty.speedMult,
       vy: 0,
@@ -1093,10 +1093,6 @@ export class GameEngine {
     this._drawThreats(ctx, t);
     this._drawCollectibles(ctx, t);
     this._drawStealthObjectives(ctx, t);
-    this._drawGasParticles(ctx);
-    this._drawDustParticles(ctx);
-    this._drawCometTail(ctx, t);
-    this._drawComet(ctx, t);
     this._drawDestination(ctx, t);
     ctx.restore();
 
@@ -1106,6 +1102,15 @@ export class GameEngine {
     vig.addColorStop(1, 'rgba(0,0,8,0.60)');
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, W, H);
+
+    // Draw the comet after the vignette so the coma and tails stay photographic
+    ctx.save();
+    ctx.translate(-this.camera.x, 0);
+    this._drawGasParticles(ctx);
+    this._drawDustParticles(ctx);
+    this._drawCometTail(ctx, t);
+    this._drawComet(ctx, t);
+    ctx.restore();
 
     this._drawLensFlares(ctx, W, H, t);
 
@@ -2132,13 +2137,13 @@ export class GameEngine {
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, 58 + vel * 9, 8, rockDust, 0.14);
-    const coma = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 18);
-    coma.addColorStop(0, `rgba(${rockDust},0.08)`);
+    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, 72 + vel * 10, 11, rockDust, 0.2);
+    const coma = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 24);
+    coma.addColorStop(0, `rgba(${rockDust},0.12)`);
     coma.addColorStop(1, 'transparent');
     ctx.fillStyle = coma;
     ctx.beginPath();
-    ctx.arc(a.x, a.y, 18, 0, Math.PI * 2);
+    ctx.arc(a.x, a.y, 24, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -2159,8 +2164,8 @@ export class GameEngine {
     const lx = litX * c - litY * s;
     const ly = litX * s + litY * c;
 
-    const len = 20;
-    const wid = 6.4;
+    const len = 28;
+    const wid = 9.2;
     ctx.beginPath();
     ctx.ellipse(0, 0, len, wid, 0, 0, Math.PI * 2);
     const body = ctx.createRadialGradient(lx * len * 0.4, ly * wid * 0.4, 1.2, 0, 0, len);
@@ -2175,15 +2180,17 @@ export class GameEngine {
     ctx.beginPath();
     ctx.ellipse(0, 0, len, wid, 0, 0, Math.PI * 2);
     ctx.clip();
-    for (const rx of [-11, -4, 3, 10]) {
+    ctx.strokeStyle = 'rgba(28,16,10,0.35)';
+    ctx.lineWidth = 1.1;
+    for (const gy of [-3.6, -1.2, 1.4, 3.8]) {
       ctx.beginPath();
-      ctx.ellipse(rx, 0, 2.5, wid * 0.8, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(18,10,6,0.3)';
-      ctx.fill();
+      ctx.moveTo(-len + 2, gy);
+      ctx.quadraticCurveTo(0, gy + 0.8, len - 2, gy - 0.4);
+      ctx.stroke();
     }
     ctx.beginPath();
-    ctx.ellipse(lx * 7, ly * 3, 4.4, 2.2, -0.35, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,228,196,0.16)';
+    ctx.ellipse(lx * 8, ly * 3.2, 7.5, 3.4, Math.atan2(ly, lx), 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,228,196,0.14)';
     ctx.fill();
     ctx.restore();
     ctx.restore();
@@ -2212,19 +2219,19 @@ export class GameEngine {
     const dPx = -dY;
     const dPy = dX;
 
-    const ionLen = 260 + vel * 36;
-    const dustLen = 175 + vel * 22;
+    const ionLen = 340 + vel * 42;
+    const dustLen = 230 + vel * 28;
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
 
-    this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen * 1.08, 58, dust, 0.2);
-    this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen, 34, '255,232,200', 0.13);
-    this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen * 0.62, 16, '255,244,220', 0.1);
+    this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen * 1.12, 78, dust, 0.32);
+    this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen, 46, '255,228,186', 0.22);
+    this._drawSoftFan(ctx, a.x, a.y, dX, dY, dPx, dPy, dustLen * 0.7, 22, '255,244,220', 0.16);
 
-    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen, 12, ion, 0.26);
-    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen * 0.88, 5, '210,230,255', 0.2);
-    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen * 0.7, 2.2, '235,245,255', 0.16);
+    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen, 16, ion, 0.36);
+    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen * 0.9, 7, '200,228,255', 0.28);
+    this._drawSoftFan(ctx, a.x, a.y, sun.x, sun.y, sun.px, sun.py, ionLen * 0.72, 2.6, '235,245,255', 0.22);
 
     for (let s = 0; s < 4; s++) {
       const off = (s - 1.5) * 3.6;
@@ -2242,24 +2249,24 @@ export class GameEngine {
       ctx.stroke();
     }
 
-    const bowX = a.x - sun.x * 10;
-    const bowY = a.y - sun.y * 10;
-    const outer = ctx.createRadialGradient(bowX, bowY, 0, a.x, a.y, 70);
-    outer.addColorStop(0, `rgba(${dust},0.18)`);
-    outer.addColorStop(0.38, `rgba(${ion},0.07)`);
+    const bowX = a.x - sun.x * 14;
+    const bowY = a.y - sun.y * 14;
+    const outer = ctx.createRadialGradient(bowX, bowY, 0, a.x, a.y, 96);
+    outer.addColorStop(0, `rgba(${dust},0.28)`);
+    outer.addColorStop(0.34, `rgba(${ion},0.1)`);
     outer.addColorStop(1, 'transparent');
     ctx.fillStyle = outer;
     ctx.beginPath();
-    ctx.arc(a.x, a.y, 70, 0, Math.PI * 2);
+    ctx.arc(a.x, a.y, 96, 0, Math.PI * 2);
     ctx.fill();
 
-    const inner = ctx.createRadialGradient(bowX, bowY, 0, a.x, a.y, 28);
-    inner.addColorStop(0, `rgba(255,248,236,${0.22 + pulse * 0.04})`);
-    inner.addColorStop(0.5, `rgba(${dust},0.1)`);
+    const inner = ctx.createRadialGradient(bowX, bowY, 0, a.x, a.y, 38);
+    inner.addColorStop(0, `rgba(255,248,236,${0.38 + pulse * 0.06})`);
+    inner.addColorStop(0.45, `rgba(${dust},0.16)`);
     inner.addColorStop(1, 'transparent');
     ctx.fillStyle = inner;
     ctx.beginPath();
-    ctx.arc(a.x, a.y, 28, 0, Math.PI * 2);
+    ctx.arc(a.x, a.y, 38, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
@@ -2317,7 +2324,7 @@ export class GameEngine {
     ctx.translate(x, y);
 
     // Faint sunward sublimation — a real jet, not cartoon spokes
-    const jetLen = 22 + Math.sin(t * 0.002) * 2;
+    const jetLen = 34 + Math.sin(t * 0.002) * 3;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     const jet = ctx.createRadialGradient(litX * 6, litY * 6, 0, litX * 10, litY * 10, jetLen);
@@ -2336,7 +2343,7 @@ export class GameEngine {
     const lx = litX * c - litY * s;
     const ly = litX * s + litY * c;
 
-    const NR = 12;
+    const NR = 18;
     const pts = 16;
     const buildPath = () => {
       ctx.beginPath();
@@ -2371,25 +2378,20 @@ export class GameEngine {
     ctx.clip();
 
     const craterDefs = [
-      { cx: -3.2, cy: -2.4, r: 2.6 },
-      { cx: 3.6, cy: 2.2, r: 2.0 },
-      { cx: -4.4, cy: 3.4, r: 1.6 },
-      { cx: 2.2, cy: -4.2, r: 1.3 },
+      { cx: -4.8, cy: -1.6, rx: 3.4, ry: 1.8, a: -0.4 },
+      { cx: 3.8, cy: 3.2, rx: 2.6, ry: 1.5, a: 0.5 },
+      { cx: 0.8, cy: -4.6, rx: 2.2, ry: 1.2, a: 0.2 },
     ];
     for (const cr of craterDefs) {
       ctx.beginPath();
-      ctx.arc(cr.cx, cr.cy, cr.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.32)';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(cr.cx - cr.r * 0.28, cr.cy - cr.r * 0.28, cr.r * 0.42, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,245,230,0.08)';
+      ctx.ellipse(cr.cx, cr.cy, cr.rx, cr.ry, cr.a, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
       ctx.fill();
     }
 
     ctx.beginPath();
-    ctx.ellipse(lx * NR * 0.28, ly * NR * 0.22, NR * 0.34, NR * 0.2, Math.atan2(ly, lx), 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(210,220,230,0.16)';
+    ctx.ellipse(lx * NR * 0.32, ly * NR * 0.18, NR * 0.48, NR * 0.26, Math.atan2(ly, lx), 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(214,224,232,0.18)';
     ctx.fill();
 
     ctx.beginPath();
