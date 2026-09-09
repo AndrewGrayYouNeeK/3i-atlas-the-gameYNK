@@ -73,7 +73,7 @@ export default function EndgameScreen({ totalScore, onRestart }) {
                   <Eye className="w-7 h-7 mb-3" style={{ color: '#fbbf24' }} />
                   <div className="font-orbitron text-sm font-bold mb-2" style={{ color: '#fbbf24' }}>REVEAL YOURSELF</div>
                   <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)', fontFamily: "'Exo 2',sans-serif" }}>
-                    Open all three eyes. Let humanity see the truth. The ancient guardian unveils.
+                    Drop the ice-and-dust disguise. Let humanity see the truth. The ancient guardian unveils.
                   </p>
                 </motion.button>
 
@@ -87,7 +87,7 @@ export default function EndgameScreen({ totalScore, onRestart }) {
                   <EyeOff className="w-7 h-7 mb-3" style={{ color: '#38bdf8' }} />
                   <div className="font-orbitron text-sm font-bold mb-2" style={{ color: '#38bdf8' }}>VANISH FOREVER</div>
                   <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)', fontFamily: "'Exo 2',sans-serif" }}>
-                    Cloak all three eyes. Slip into the void. Humanity will never know.
+                    Dim the coma. Slip into the void. Humanity will never know.
                   </p>
                 </motion.button>
               </div>
@@ -102,9 +102,9 @@ export default function EndgameScreen({ totalScore, onRestart }) {
                     <span className="font-orbitron text-xs" style={{ color: '#fbbf24' }}>THE REVELATION</span>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)', fontFamily: "'Exo 2',sans-serif" }}>
-                    All three eyes open simultaneously. The icy shell dissolves into light. Humanity's satellites capture
-                    something impossible — a comet with eyes, blazing in purple and gold. For 11 seconds, every telescope
-                    on Earth points upward. Then you are gone, leaving only light.
+                    The icy shell dissolves into light. Humanity's satellites capture something that is not a rock —
+                    a visitor, blazing against the Sun. For 11 seconds, every telescope on Earth points upward.
+                    Then you are gone, leaving only light.
                   </p>
                 </div>
               ) : (
@@ -115,7 +115,7 @@ export default function EndgameScreen({ totalScore, onRestart }) {
                     <span className="font-orbitron text-xs" style={{ color: '#38bdf8' }}>THE VANISHING</span>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)', fontFamily: "'Exo 2',sans-serif" }}>
-                    The comet trail dims. The eyes close, one by one. Atlas becomes the void between stars — omnipresent,
+                    The comet trail dims. The ion stream fades. Atlas becomes the void between stars — omnipresent,
                     invisible, eternal. Humanity will search for that strange comet for centuries. And in that silence,
                     Atlas watches still.
                   </p>

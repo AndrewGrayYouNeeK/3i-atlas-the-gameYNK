@@ -15,7 +15,7 @@ export default function EyePanel({ activeEye, mythCooldown, onActivate }) {
   return (
     <div className="absolute right-3 z-10 flex flex-col gap-2" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 290px)' }}>
       <div className="font-orbitron text-[12px] tracking-[0.2em] mb-0.5 text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>
-        EYES
+        SENSORS
       </div>
       {eyeList.map((eye) => {
         const isActive = activeEye === eye.id;

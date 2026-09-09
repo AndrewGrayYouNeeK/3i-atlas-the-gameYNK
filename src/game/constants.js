@@ -5,10 +5,10 @@ export const CRAFT = {
     designation: '1I/2017 U1',
     hudLabel: "1I / 'OUMUAMUA",
     actLabel: 'ACT I · RECON',
-    trailColor: '220,150,100',
-    coreColor: '#d4b08c',
-    glowColor: '#e07a45',
-    nucleusLight: '#f0dcc4',
+    trailColor: '196,154,118',
+    coreColor: '#8a6848',
+    glowColor: '#c4a07a',
+    nucleusLight: '#c4a07a',
   },
   atlas: {
     id: 'atlas',
@@ -16,12 +16,12 @@ export const CRAFT = {
     designation: '3I/ATLAS',
     hudLabel: '3I / ATLAS',
     actLabel: 'ACT II · INFILTRATION',
-    trailColor: '210,185,155',
-    coreColor: '#7a5a48',
-    glowColor: '#c4a07a',
-    nucleusLight: '#e6d4c0',
-    ionColor: '150,195,255',
-    dustColor: '215,190,155',
+    trailColor: '232,210,176',
+    coreColor: '#6e6054',
+    glowColor: '#c8b8a0',
+    nucleusLight: '#c8c0b4',
+    ionColor: '155,195,245',
+    dustColor: '232,210,176',
   },
 };
 
@@ -48,7 +48,7 @@ export const LEVELS = [
     gravityWells: 1,
     bgColor: '#02010e',
     nebulaColor: 'rgba(30,10,60,0.15)',
-    lore: "1I/'Oumuamua was never a comet. It was a dry, tumbling scout hull — the first visitor. Earth called it a cigar of ice. It was a pair of eyes.",
+    lore: "1I/'Oumuamua was never a comet. It was a dry, tumbling scout hull — the first visitor. Earth called it a cigar of ice. It was a silent rock.",
     threatConfig: { probe: 2, satellite: 0, hunter: 0, deepSpace: 0, relay: 0 },
     hint: "Move like a tumbling rock. 'Oumuamua has almost no coma — no sudden jets.",
   },
@@ -473,7 +473,7 @@ export const EYES = {
 };
 
 export const SKINS = [
-  { id: 'default', name: 'ICY ATLAS', desc: 'Dirty ice nucleus, dust + ion tails', price: 0, unlockType: 'free', coreColor: '#8b6b55', glowColor: '#c9a882', trailColor: '210,185,155', nucleusLight: '#ead8c4' },
+  { id: 'default', name: 'ICY ATLAS', desc: 'Dirty-ice nucleus, sunward coma, dust + ion tails', price: 0, unlockType: 'free', coreColor: '#6e6054', glowColor: '#c8b8a0', trailColor: '232,210,176', nucleusLight: '#c8c0b4' },
   { id: 'fire_comet', name: 'FIRE COMET', desc: 'Orange/red trail with ember particles', price: 0.99, priceId: 'price_skin_fire_comet', unlockType: 'stripe', coreColor: '#ff6622', glowColor: '#ff3300', trailColor: '255,100,20', nucleusLight: '#ff9955' },
   { id: 'dark_matter', name: 'DARK MATTER', desc: 'Black body, purple glow, distortion effect', price: 1.99, priceId: 'price_skin_dark_matter', unlockType: 'stripe', coreColor: '#110022', glowColor: '#9900ff', trailColor: '180,0,255', nucleusLight: '#440066' },
   { id: 'neon_ghost', name: 'NEON GHOST', desc: 'Transparent body, electric blue outline, ghost trail', price: 2.99, priceId: 'price_skin_neon_ghost', unlockType: 'stripe', coreColor: '#001133', glowColor: '#00aaff', trailColor: '0,200,255', nucleusLight: '#003366' },

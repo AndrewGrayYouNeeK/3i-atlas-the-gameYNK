@@ -14,140 +14,84 @@ export default function SkinPreviewCanvas({ skin, size = 100 }) {
 
     const cx = size / 2;
     const cy = size / 2;
-    const NR = size * 0.13;
-    const trail = [];
+    const NR = size * 0.11;
+
+    const drawFan = (x, y, dirX, dirY, length, halfWidth, color, alpha) => {
+      const perpX = -dirY;
+      const perpY = dirX;
+      const tipX = x + dirX * length;
+      const tipY = y + dirY * length;
+      const midX = x + dirX * length * 0.42;
+      const midY = y + dirY * length * 0.42;
+      ctx.beginPath();
+      ctx.moveTo(x + perpX * 1.2, y + perpY * 1.2);
+      ctx.quadraticCurveTo(midX + perpX * halfWidth, midY + perpY * halfWidth, tipX, tipY);
+      ctx.quadraticCurveTo(midX - perpX * halfWidth, midY - perpY * halfWidth, x - perpX * 1.2, y - perpY * 1.2);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(x, y, tipX, tipY);
+      g.addColorStop(0, `rgba(${color},${alpha})`);
+      g.addColorStop(0.55, `rgba(${color},${alpha * 0.28})`);
+      g.addColorStop(1, `rgba(${color},0)`);
+      ctx.fillStyle = g;
+      ctx.fill();
+    };
 
     const draw = () => {
-      t += 0.04;
+      t += 0.035;
       ctx.clearRect(0, 0, size, size);
-
-      // Dark background
       ctx.fillStyle = '#05050f';
       ctx.fillRect(0, 0, size, size);
 
-      // Nebula glow bg
-      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.6);
-      bg.addColorStop(0, skin.glowColor + '22');
-      bg.addColorStop(1, 'transparent');
-      ctx.fillStyle = bg;
-      ctx.beginPath();
-      ctx.arc(cx, cy, size * 0.6, 0, Math.PI * 2);
-      ctx.fill();
+      const px = cx + Math.sin(t * 0.55) * 5;
+      const py = cy + Math.cos(t * 0.4) * 3;
+      const sunX = -0.82;
+      const sunY = -0.42;
+      const spin = t * 0.18;
 
-      // Animated ghost trail
-      trail.push({ x: cx + Math.sin(t * 0.8) * 8, y: cy + Math.cos(t * 0.5) * 5 });
-      if (trail.length > 18) trail.shift();
-      for (let i = 1; i < trail.length; i++) {
-        const prog = i / trail.length;
-        ctx.beginPath();
-        ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
-        ctx.lineTo(trail[i].x, trail[i].y);
-        ctx.strokeStyle = `rgba(${skin.trailColor},${prog * 0.55})`;
-        ctx.lineWidth = prog * (size * 0.06);
-        ctx.lineCap = 'round';
-        ctx.stroke();
-      }
-
-      const px = cx + Math.sin(t * 0.8) * 8;
-      const py = cy + Math.cos(t * 0.5) * 5;
-
-      // Outer coma glow
-      const coma = ctx.createRadialGradient(px, py, 0, px, py, NR * 3.5);
-      coma.addColorStop(0, skin.glowColor + '55');
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      drawFan(px, py, -sunX * 0.75 + 0.25, -sunY * 0.75 + 0.12, size * 0.42, size * 0.12, skin.trailColor, 0.28);
+      drawFan(px, py, -sunX, -sunY, size * 0.52, size * 0.035, '160,200,245', 0.32);
+      const coma = ctx.createRadialGradient(px + sunX * 4, py + sunY * 4, 0, px, py, NR * 3.4);
+      coma.addColorStop(0, `rgba(${skin.trailColor},0.22)`);
       coma.addColorStop(1, 'transparent');
       ctx.fillStyle = coma;
       ctx.beginPath();
-      ctx.arc(px, py, NR * 3.5, 0, Math.PI * 2);
+      ctx.arc(px, py, NR * 3.4, 0, Math.PI * 2);
       ctx.fill();
-
-      // Special effects per skin
-      if (skin.id === 'void_reaper') {
-        // warping space rings
-        for (let r = 0; r < 3; r++) {
-          const rr = NR * (1.8 + r * 0.7) + Math.sin(t + r) * 3;
-          ctx.beginPath();
-          ctx.arc(px, py, rr, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(255,0,102,${0.3 - r * 0.08})`;
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
-      }
-      if (skin.id === 'neon_ghost') {
-        // electric outline pulse
-        ctx.beginPath();
-        ctx.arc(px, py, NR * 1.6 + Math.sin(t * 3) * 2, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(0,200,255,${0.4 + 0.3 * Math.sin(t * 3)})`;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
-      if (skin.id === 'golden_atlas') {
-        // crown particle burst
-        for (let p = 0; p < 6; p++) {
-          const pa = (p / 6) * Math.PI * 2 + t;
-          const pd = NR * 2.2 + Math.sin(t * 2 + p) * 3;
-          ctx.beginPath();
-          ctx.arc(px + Math.cos(pa) * pd, py + Math.sin(pa) * pd, 1.5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,220,0,${0.5 + 0.4 * Math.sin(t + p)})`;
-          ctx.fill();
-        }
-      }
-      if (skin.id === 'fire_comet') {
-        // ember particles
-        for (let e = 0; e < 5; e++) {
-          const ea = Math.PI + (e / 5) * 0.8 - 0.4 + Math.sin(t * 2 + e) * 0.3;
-          const ed = NR * (1.5 + Math.random() * 0.5);
-          ctx.beginPath();
-          ctx.arc(px + Math.cos(ea) * ed, py + Math.sin(ea) * ed, 1, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,${100 + Math.floor(Math.random() * 80)},0,0.7)`;
-          ctx.fill();
-        }
-      }
-
-      // Nucleus body
-      const bodyG = ctx.createRadialGradient(px - NR * 0.3, py - NR * 0.3, 0, px, py, NR * 1.1);
-      bodyG.addColorStop(0, skin.nucleusLight);
-      bodyG.addColorStop(0.4, skin.coreColor);
-      bodyG.addColorStop(1, skin.id === 'dark_matter' || skin.id === 'void_reaper' ? '#000000' : skin.coreColor + '44');
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(px, py, NR, 0, Math.PI * 2);
-      ctx.shadowColor = skin.glowColor;
-      ctx.shadowBlur = 20;
-      ctx.fillStyle = bodyG;
-      ctx.fill();
-      if (skin.id === 'neon_ghost') {
-        ctx.strokeStyle = '#00aaff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
       ctx.restore();
 
-      // Three eyes
-      const eyeCol = skin.id === 'fire_comet' ? '255,120,0'
-        : skin.id === 'dark_matter' ? '180,0,255'
-        : skin.id === 'neon_ghost' ? '0,200,255'
-        : skin.id === 'golden_atlas' ? '255,210,0'
-        : skin.id === 'void_reaper' ? '255,0,100'
-        : '100,200,255';
-      for (let i = 0; i < 3; i++) {
-        const ea = (i / 3) * Math.PI * 2 + t * 0.3;
-        const ex = px + Math.cos(ea) * NR * 0.58;
-        const ey = py + Math.sin(ea) * NR * 0.58;
-        ctx.beginPath();
-        ctx.arc(ex, ey, 1.8, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${eyeCol},${0.7 + 0.3 * Math.sin(t * 2 + i)})`;
-        ctx.shadowColor = `rgba(${eyeCol},1)`;
-        ctx.shadowBlur = 8;
-        ctx.fill();
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(spin);
+      ctx.beginPath();
+      for (let i = 0; i <= 14; i++) {
+        const ang = (i / 14) * Math.PI * 2;
+        const r = NR * (0.82 + 0.16 * Math.cos(ang * 3 + 0.4) + 0.08 * Math.sin(ang * 5));
+        const nx = Math.cos(ang) * r;
+        const ny = Math.sin(ang) * r * 0.86;
+        i === 0 ? ctx.moveTo(nx, ny) : ctx.lineTo(nx, ny);
       }
-      ctx.shadowBlur = 0;
+      ctx.closePath();
+      const body = ctx.createRadialGradient(-NR * 0.35, -NR * 0.3, 0, 0, 0, NR * 1.15);
+      body.addColorStop(0, '#c8c0b4');
+      body.addColorStop(0.28, skin.id === 'default' ? '#6e6054' : skin.coreColor);
+      body.addColorStop(0.7, '#221c18');
+      body.addColorStop(1, '#0a0908');
+      ctx.fillStyle = body;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(-NR * 0.22, -NR * 0.18, NR * 0.28, NR * 0.16, -0.4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(210,220,230,0.16)';
+      ctx.fill();
+      ctx.restore();
 
       animRef.current = requestAnimationFrame(draw);
     };
 
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [skin.id]);
+  }, [skin.id, skin.coreColor, skin.trailColor, size]);
 
   return <canvas ref={canvasRef} width={size} height={size} style={{ borderRadius: '50%' }} />;
 }

@@ -12,7 +12,7 @@ You start as **'Oumuamua** — a tumbling scout hull sent to scope Earth. After 
 - Earth backdrop on Atlas missions (they are watching)
 - 3 difficulty modes: Easy, Medium, Hard
 - Gas release mechanics: Methane (optical cloak), Ammonia (radar jam), Xenon (heat mask)
-- Three Eyes system: Night Vision, Heat Scan, Myth Mode (slow time)
+- Sensor suite: Night Vision, Heat Scan, Myth Mode (slow time)
 - Detection system — stay below 5% to earn stealth bonus
 - Leaderboard & achievements
 - Unlockable comet skins
