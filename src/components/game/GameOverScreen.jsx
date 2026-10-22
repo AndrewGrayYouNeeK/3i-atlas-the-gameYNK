@@ -40,10 +40,8 @@ export default function GameOverScreen({ levelId, reason, onRetry, onMainMenu, c
           </h2>
           <p className="text-sm leading-relaxed mb-6" style={{ color: 'rgba(255,255,255,0.45)', fontFamily: "'Exo 2', sans-serif" }}>
             {isCollision
-              ? `${craft?.shortName || 'Atlas'} collided with a planetary body. The hull shattered on impact. Mission terminated.`
-              : craft?.id === 'oumuamua'
-                ? "Earth's telescopes locked onto 1I/'Oumuamua. The scout is burned. 3I/ATLAS cannot launch."
-                : "Earth's tracking array locked onto 3I/ATLAS. The second visitor is exposed. The mission failed."
+              ? `${craft?.shortName || '3I/ATLAS'} met a planet. A comet does not do that. The passage is over.`
+              : 'The disguise failed. Some instrument resolved a hull, a burn, or a spectrum that ice does not make. 3I/ATLAS is no longer just a comet.'
             }
           </p>
 
@@ -52,8 +50,8 @@ export default function GameOverScreen({ levelId, reason, onRetry, onMainMenu, c
             <div className="font-orbitron text-[8px] tracking-widest mb-1.5" style={{ color: 'rgba(248,113,113,0.6)' }}>DEBRIEF</div>
             <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: "'Exo 2', sans-serif" }}>
               {isCollision
-                ? 'Avoid planetary bodies and gravity wells. Their influence radius is wider than it appears.'
-                : 'Probe networks communicate in real-time. Getting spotted alerts nearby hunters. Use gas countermeasures.'}
+                ? 'Mars and Jupiter will pull. Stay in the corridor a real comet would fly.'
+                : 'Watch the green bands. Coast while a telescope is locked on you. Correct the disguise when it looks away.'}
             </p>
           </div>
 

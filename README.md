@@ -1,56 +1,51 @@
 # Atlas — The Game
 
-A stealth campaign: recon Earth as 1I/'Oumuamua, leave the solar system, then send 3I/ATLAS and stay undetected while Earth watches from the background.
+A strategic stealth campaign. You are **3I/ATLAS** — discovered 1 July 2025 and filed as an interstellar comet. Keep that disguise intact while observatories and probes watch the real trajectory.
 
 ## About
 
-You start as **'Oumuamua** — a tumbling scout hull sent to scope Earth. After the recon, you exit the system and dispatch **3I/ATLAS**. The second visitor has to ghost Earth's sensors. Earth stays painted in the sky for the Atlas run.
+The public record is the timeline: ATLAS at Río Hurtado, Hubble and JWST, the Mars passage, solar conjunction, perihelion near 1.36 AU, the post-perihelion fade, the Jupiter region, and the hyperbolic exit. The ship log is the game. Coma, tail, brightness, and non-gravitational acceleration each have a band a comet is allowed to occupy. Leave it while someone is looking and suspicion climbs.
 
 ## Features
 
-- Two-act campaign: 1I/'Oumuamua recon, then 3I/ATLAS infiltration
-- Earth backdrop on Atlas missions (they are watching)
+- Eight stages along the 2025–2026 trajectory, each with its own watchers and objective
+- Disguise meters: coma, ion/dust tail, trajectory anomaly, spectrum, A1 jet window, ephemeris
+- Briefings split into public record and classified ship log
+- Suspicion / detection that ends the run at 100%
 - 3 difficulty modes: Easy, Medium, Hard
-- Gas release mechanics: Methane (optical cloak), Ammonia (radar jam), Xenon (heat mask)
-- Sensor suite: Night Vision, Heat Scan, Myth Mode (slow time)
-- Detection system — stay below 5% to earn stealth bonus
-- Leaderboard & achievements
-- Unlockable comet skins
-- Fully playable on mobile with on-screen joystick
+- Mouse, keyboard, and touch controls
+- Leaderboard, achievements, and comet skins (optional accounts)
 
 ## Controls
 
 | Action | Key |
 |--------|-----|
-| Move | WASD / Arrow Keys |
-| Burst Speed | Hold SHIFT |
-| Slow Down | Hold CTRL |
-| Methane Gas | Q |
-| Ammonia Gas | E |
-| Xenon Gas | R |
-| Night Vision | 1 |
-| Heat Scan | 2 |
-| Myth Mode | 3 |
+| Steer | WASD / Arrow Keys / joystick |
+| Dim coma | Q |
+| Vent coma brighter | E |
+| Align tail / tumble ion tail | R |
+| Burn (raises anomaly, can leak radio) | Shift |
+| Spectrum mix (follow-up stage) | 1 CO₂, 2 H₂O, 3 Dust |
+| One allowed outburst (morning-sky stage) | F |
 | Pause | ESC |
 
-## Levels
+## Stages
 
-**Act I — 1I/'Oumuamua**
-1. **Interstellar Approach** — Enter from the dark, line up on Earth
-2. **Scope Earth** — Fly close, map the watchers, do not linger
-3. **Leave the System** — Coast out past the heliopause
+1. **Río Hurtado** — 1 July 2025. Be catalogued by the ATLAS survey as a comet.
+2. **The Follow-Up** — Hubble, JWST, and the ground. Hide the hull. Feed JWST a CO₂-rich spectrum.
+3. **Mars Passage** — early October 2025. Ride the corridor. Do not maneuver while orbiters image.
+4. **Solar Conjunction** — late October 2025. Earth is blind. Coronagraphs are not. Keep the ephemeris clean.
+5. **Perihelion** — around 29 October 2025, about 1.36 AU. Hold non-gravitational A1 in the natural jet window.
+6. **Morning Sky** — fade on the published brightness curve. One outburst, not two.
+7. **Jupiter Passage** — around March 2026. Ragged ion tail, radio silence, stay in the flyby band.
+8. **Departure** — go quiet and cross the line.
 
-**Act II — 3I/ATLAS**
-4. **The Dispatch** — The second hull arrives. Earth is watching.
-5. **Jupiter Blind** — Hide behind the giant
-6. **Mars Dark** — No thrust, dishes and Earth both listening
-7. **Inner Watch** — Venus veil, thermal chaos
-8. **Ghost the Watchers** — Final stealth with Earth still in the background
+Placeholder Supabase values are enough to play offline. Auth, leaderboard, and the store need a real project.
 
 ## Tech Stack
 
 - **Frontend**: React 18, Vite, TailwindCSS, Framer Motion
-- **3D Graphics**: Three.js
+- **Graphics**: Canvas 2D — parallax starfields, particle coma and tails, bloom. Three.js is still installed for older scene code.
 - **Backend**: Supabase (Auth, Database, Edge Functions)
 - **Payments**: Stripe (optional, for in-app purchases)
 

@@ -26,20 +26,18 @@ export default function About() {
 
           <div className="space-y-5 text-white/65 leading-relaxed text-sm sm:text-base">
             <p>
-              <strong className="text-white/90">3i-Atlas: The Game</strong> is a stealth-navigation campaign about two interstellar hulls and one watched planet.
-              You start as <strong className="text-white/90">1I/&apos;Oumuamua</strong> — a tumbling scout sent to scope Earth. Then you leave the solar system.
-              Then you send <strong className="text-white/90">3I/ATLAS</strong>, and try to stay undetected while Earth sits in the background, watching.
+              <strong className="text-white/90">3i-Atlas: The Game</strong> puts you inside 3I/ATLAS, the interstellar object discovered on 1 July 2025.
+              Publicly it is a comet on a hyperbolic orbit. In this telling the nucleus is a ship, and the coma is the disguise.
             </p>
             <p>
-              The game blends precision movement with strategic thinking. Move like debris — slow, cold, unpowered — using planet gravity, moon shadows, and timed gas releases.
-              Deploy Methane to cloak from visual scanners, Ammonia to jam radar, and Xenon to mask your heat signature. The moment you act like a ship, Earth knows.
+              You manage the disguise while real instruments look: the ATLAS survey, Hubble and JWST, Mars orbiters, solar coronagraphs, the perihelion jet window near 1.36 AU, the post-perihelion fade, the Jupiter passage, and the outbound hyperbola.
+              Coma, tail alignment, brightness, and non-gravitational acceleration each have a band a comet is allowed to occupy. Leave the band while someone is watching and suspicion climbs.
             </p>
             <p>
-              Act I is reconnaissance. Act II is infiltration. Threats grow more coordinated after the first visit: probe networks share intelligence, and hunter drones chase on sight.
-              Earth remains painted behind the sky for the Atlas run — a reminder that the watchers never stopped looking after &apos;Oumuamua.
+              Each stage opens with a short public-record briefing and a classified ship log. The dates follow the published timeline. The conspiracy is the game.
             </p>
             <p>
-              <strong className="text-white/90">Who is this game for?</strong> Players who want arcade stealth with a sci-fi narrative twist. Easy is a cruise. Hard is a long shadow-and-drift infiltration.
+              <strong className="text-white/90">Who is this game for?</strong> Players who want a stealth strategy pass along a real trajectory. Easy widens the disguise bands. Hard narrows them and makes suspicion stick.
             </p>
             <p>
               The game features a global leaderboard, unlockable comet skins, and lore fragments that unlock on perfect stealth runs.

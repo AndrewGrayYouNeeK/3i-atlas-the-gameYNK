@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
 
 const getStealthGrade = (detection) => {
-  if (detection < 5) return 'S';
-  if (detection < 15) return 'A';
-  if (detection < 35) return 'B';
+  if (detection < 18) return 'S';
+  if (detection < 40) return 'A';
+  if (detection < 65) return 'B';
   return 'C';
 };
 
@@ -31,7 +31,7 @@ export default function PostRunStatsScreen({ stats, onPlayAgain, onNextLevel, on
             ['Score', stats?.score?.toLocaleString() || '0'],
             ['Detection', `${(stats?.detection || 0).toFixed(1)}%`],
             ['Stealth', grade],
-            ['Gas Used', String(stats?.gasUsed || 0)],
+            ['Cover', `${Math.round(stats?.cover ?? Math.max(0, 100 - (stats?.detection || 0)))}%`],
           ].map(([label, value]) => (
             <div key={label} className="rounded-2xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <div className="font-orbitron text-lg text-white">{value}</div>
@@ -43,14 +43,14 @@ export default function PostRunStatsScreen({ stats, onPlayAgain, onNextLevel, on
         <div className="rounded-2xl p-4 mb-5" style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.18)' }}>
           <div className="font-orbitron text-[9px] mb-1" style={{ color: '#c4b5fd' }}>Stealth Rating</div>
           <div className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
-            {grade === 'S' ? 'Perfect ghost run.' : grade === 'A' ? 'Excellent covert control.' : grade === 'B' ? 'Mission complete, but risky.' : 'Visible and vulnerable.'}
+            {grade === 'S' ? 'The file says comet. Nothing else.' : grade === 'A' ? 'Disguise held, with a few nervous minutes.' : grade === 'B' ? 'You made it. Some instruments are still arguing.' : 'They have a picture that does not look like ice.'}
           </div>
         </div>
 
         <div className="flex flex-col gap-2">
           <button onClick={onPlayAgain} className="w-full py-3 rounded-2xl font-orbitron text-sm text-white" style={{ background: 'linear-gradient(135deg,#7c3aed,#5b21b6)' }}>PLAY AGAIN</button>
           {!isLastLevel && <button onClick={() => onNextLevel()} className="w-full py-3 rounded-2xl font-orbitron text-sm" style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', color: '#38bdf8' }}>{nextLabel || 'NEXT LEVEL'}</button>}
-          {isLastLevel && <button onClick={() => onNextLevel('endgame')} className="w-full py-3 rounded-2xl font-orbitron text-sm" style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', color: '#38bdf8' }}>GHOST EARTH</button>}
+          {isLastLevel && <button onClick={() => onNextLevel('endgame')} className="w-full py-3 rounded-2xl font-orbitron text-sm" style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', color: '#38bdf8' }}>LEAVE THE SYSTEM</button>}
           <button onClick={onMainMenu} className="w-full py-3 rounded-2xl font-orbitron text-sm" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>MAIN MENU</button>
         </div>
       </motion.div>
