@@ -1,124 +1,71 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import GameCanvas from '../components/game/GameCanvas.jsx';
-import DetectionHUD from '../components/game/DetectionHUD.jsx';
-import GasSelector from '../components/game/GasSelector.jsx';
-import EyePanel from '../components/game/EyePanel.jsx';
-import ObjectivesPanel from '../components/game/ObjectivesPanel.jsx';
-import MobileControls from '../components/game/MobileControls.jsx';
-import SpeedControl from '../components/game/SpeedControl.jsx';
+import CampaignCanvas from '../components/game/CampaignCanvas.jsx';
+import CampaignHUD from '../components/game/CampaignHUD.jsx';
+import CampaignControls from '../components/game/CampaignControls.jsx';
+import BriefingScreen from '../components/game/BriefingScreen.jsx';
 import GameOverScreen from '../components/game/GameOverScreen.jsx';
-import EndgameScreen from '../components/game/EndgameScreen.jsx';
 import PostRunStatsScreen from '../components/game/PostRunStatsScreen.jsx';
 import PauseMenu from '../components/game/PauseMenu.jsx';
-import DispatchScreen from '../components/game/DispatchScreen.jsx';
-import { LEVELS, getCraft, isHandoffLevel } from '../game/constants.js';
+import EndgameScreen from '../components/game/EndgameScreen.jsx';
+import { LEVELS, getCraft } from '../game/constants.js';
 import { getDailyChallenge } from '../game/dailyChallenge.js';
 import { api } from '@/api/supabaseApi';
 
 export default function Game({ levelId: initialLevel = 0, difficulty = 'medium', skin = 'default', mode = 'mission', onMainMenu, totalScoreRef }) {
-  const dailyChallenge = mode === 'daily' ? getDailyChallenge() : null;
-  const engineOptions = {
+  const dailyChallenge = useMemo(() => (mode === 'daily' ? getDailyChallenge() : null), [mode]);
+  const engineOptions = useMemo(() => ({
     mode,
     threatBonus: dailyChallenge?.threatBonus || 0,
     scanMult: dailyChallenge?.scanMult || 1,
     gasPenalty: dailyChallenge?.gasPenalty || 0,
-  };
+  }), [mode, dailyChallenge]);
 
-  const [levelId, setLevelId] = useState(initialLevel);
-
-  useEffect(() => {
-    setLevelId(initialLevel);
-    setScore(0);
-    setDetection(0);
-    setInShadow(false);
-    setObjectives([]);
-    setActiveGas(null);
-    setUsedGases([]);
-    setGateBlocked(false);
-    setCloakMiss(null);
-    setPostRunStats(null);
-    setPaused(false);
-    setState('playing');
-    setGameKey(k => k + 1);
-  }, [initialLevel, difficulty]);
+  const [levelId, setLevelId] = useState(() => Math.max(0, Math.min(LEVELS.length - 1, initialLevel || 0)));
   const [gameKey, setGameKey] = useState(0);
-  const [detection, setDetection] = useState(0);
-  const [inShadow, setInShadow] = useState(false);
   const [score, setScore] = useState(0);
   const [totalScore, setTotalScore] = useState(totalScoreRef?.current || 0);
-  const [objectives, setObjectives] = useState([]);
+  const [hud, setHud] = useState(null);
   const [postRunStats, setPostRunStats] = useState(null);
-  const [activeGas, setActiveGas] = useState(null);
-  const [usedGases, setUsedGases] = useState([]);
-  const [gateBlocked, setGateBlocked] = useState(false);
-  const [cloakMiss, setCloakMiss] = useState(null);
-  const [gasCooldowns, setGasCooldowns] = useState({});
-  const [activeEye, setActiveEye] = useState(null);
-  const [mythCooldown, setMythCooldown] = useState(0);
-  const [speed, setSpeed] = useState(2);
   const [paused, setPaused] = useState(false);
-  const [comboMultiplier, setComboMultiplier] = useState(1);
-  const [state, setState] = useState('playing'); // playing | level_complete | game_over | endgame | dispatch
-
+  const [state, setState] = useState('briefing');
+  const [gameOverReason, setGameOverReason] = useState('detected');
   const engineRef = useRef(null);
+  const stage = LEVELS[levelId];
 
-  // Keyboard pause
+  useEffect(() => {
+    const next = Math.max(0, Math.min(LEVELS.length - 1, initialLevel || 0));
+    setLevelId(next);
+    setScore(0);
+    setHud(null);
+    setPostRunStats(null);
+    setPaused(false);
+    setState('briefing');
+    setGameKey((k) => k + 1);
+  }, [initialLevel, difficulty]);
+
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape' && state === 'playing') {
-        setPaused(p => !p);
-      }
+      if (e.key === 'Escape' && state === 'playing') setPaused((p) => !p);
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [state]);
 
-  // Poll engine state for speed / eye / myth
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const eng = engineRef.current;
-      if (!eng) return;
-      setSpeed(eng.atlas?.speed || 2);
-      setActiveEye(eng.atlas?.eyeMode || null);
-      setMythCooldown(eng.mythCooldown || 0);
-      setInShadow(Boolean(eng.inShadow));
-      setUsedGases([...eng.usedGases]);
-      setGateBlocked(Boolean(eng.gateBlocked));
-      setCloakMiss(eng.cloakMiss || null);
-    }, 100);
-    return () => clearInterval(interval);
-  }, [gameKey]);
-
-  const handleDetectionChange = useCallback((val) => setDetection(val), []);
-  const [gasCharges, setGasCharges] = useState({ methane: 3, ammonia: 3, xenon: 3 });
-
-  const handleGasChange = useCallback((gas, cds, chs) => {
-    setActiveGas(gas);
-    if (cds) setGasCooldowns({ ...cds });
-    if (chs) setGasCharges({ ...chs });
-  }, []);
-
-  const calculateGasUsed = () => {
-    const current = gasCharges || { methane: 3, ammonia: 3, xenon: 3 };
-    return (3 - (current.methane || 0)) + (3 - (current.ammonia || 0)) + (3 - (current.xenon || 0));
-  };
   const handleScoreChange = useCallback((s) => setScore(s), []);
-  const handleComboChange = useCallback((mult) => setComboMultiplier(mult), []);
-  const handleObjectiveUpdate = useCallback((objs) => setObjectives([...objs]), []);
+  const handleHud = useCallback((snapshot) => setHud(snapshot), []);
 
   const handleLevelComplete = useCallback(async (s, d) => {
     setScore(s);
-    const gasUsed = calculateGasUsed();
     const updatedTotal = totalScore + s;
     setTotalScore(updatedTotal);
     if (totalScoreRef) totalScoreRef.current = updatedTotal;
-    setPostRunStats({ score: s, detection: d, gasUsed });
+    setPostRunStats({ score: s, detection: d, cover: Math.max(0, 100 - d) });
 
     try {
       const me = await api.auth.me();
       if (me) {
-        const perfect = d < 5;
+        const perfect = d < 20;
         await api.entities.ScoreEntry.create({
           user_email: me.email,
           display_name: me.user_metadata?.display_name || me.email.split('@')[0],
@@ -126,7 +73,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
           level_id: levelId,
           detection_pct: d,
           perfect_stealth: perfect,
-          run_type: mode === 'solar_run' ? 'full_run' : mode === 'daily' ? 'single_level' : 'single_level',
+          run_type: mode === 'daily' ? 'daily' : 'timeline',
         });
         const profiles = await api.entities.PlayerProfile.filter({ user_email: me.email });
         if (profiles?.length > 0) {
@@ -155,188 +102,104 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
           });
         }
       }
-    } catch (e) {
-      console.log('Score save error', e);
+    } catch (err) {
+      console.log('Score save error', err);
     }
 
     setState('level_complete');
-  }, [levelId, gasCharges, totalScore, totalScoreRef]);
+  }, [levelId, totalScore, totalScoreRef, mode]);
 
-  const [gameOverReason, setGameOverReason] = useState('detected');
-  const handleGameOver = useCallback((reason) => { setGameOverReason(reason || 'detected'); setState('game_over'); }, []);
-
-  const activateGas = (gasId) => {
-    if (engineRef.current) engineRef.current.activateGas(gasId);
-  };
-
-  const activateEye = (eyeId) => {
-    if (engineRef.current) engineRef.current.activateEye(eyeId);
-  };
+  const handleGameOver = useCallback((reason) => {
+    setGameOverReason(reason || 'detected');
+    setState('game_over');
+  }, []);
 
   const handleNextLevel = (dest) => {
     if (dest === 'endgame' || levelId >= LEVELS.length - 1) {
       setState('endgame');
       return;
     }
-    if (isHandoffLevel(levelId)) {
-      setState('dispatch');
-      return;
-    }
     const next = levelId + 1;
-    setTotalScore(ts => ts + score);
     setLevelId(next);
     setScore(0);
-    setDetection(0);
-    setObjectives([]);
-    setActiveGas(null);
+    setHud(null);
     setPostRunStats(null);
     setPaused(false);
-    setState('playing');
-    setGameKey(k => k + 1);
-  };
-
-  const handleDispatchContinue = () => {
-    const next = levelId + 1;
-    setTotalScore(ts => ts + score);
-    setLevelId(next);
-    setScore(0);
-    setDetection(0);
-    setObjectives([]);
-    setActiveGas(null);
-    setPostRunStats(null);
-    setPaused(false);
-    setState('playing');
-    setGameKey(k => k + 1);
+    setState('briefing');
+    setGameKey((k) => k + 1);
   };
 
   const handleRetry = () => {
     setScore(0);
-    setDetection(0);
-    setObjectives([]);
-    setActiveGas(null);
+    setHud(null);
+    setPaused(false);
     setState('playing');
-    setGameKey(k => k + 1);
+    setGameKey((k) => k + 1);
   };
 
-  const handleBurst = () => {
-    if (engineRef.current) engineRef.current.setSpeed('burst');
-  };
-
-  const handleSlow = () => {
-    if (engineRef.current) engineRef.current.setSpeed('slow');
-  };
+  const playing = state === 'playing';
 
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: '#01010c' }}>
-      {/* Game Canvas */}
-      <div
-        className="absolute inset-0"
-        style={{ transform: detection > 65 ? `translate(${Math.sin(detection * 0.15) * 1.5}px, ${Math.cos(detection * 0.1) * 1.5}px)` : 'translate(0,0)' }}
-      >
-      <GameCanvas
-        key={gameKey}
-        levelId={levelId}
-        difficulty={difficulty}
-        skin={skin}
-        engineOptions={engineOptions}
-        onDetectionChange={handleDetectionChange}
-        onGasChange={handleGasChange}
-        onScoreChange={handleScoreChange}
-        onComboChange={handleComboChange}
-        onLevelComplete={handleLevelComplete}
-        onGameOver={handleGameOver}
-        onObjectiveUpdate={handleObjectiveUpdate}
-        engineRef={engineRef}
-        paused={paused || state !== 'playing'}
-      />
-      </div>
+      {playing && (
+        <CampaignCanvas
+          key={gameKey}
+          levelId={levelId}
+          difficulty={difficulty}
+          skin={skin}
+          engineOptions={engineOptions}
+          onScoreChange={handleScoreChange}
+          onLevelComplete={handleLevelComplete}
+          onGameOver={handleGameOver}
+          onHud={handleHud}
+          engineRef={engineRef}
+          paused={paused}
+        />
+      )}
 
-      {/* Three.js 3D comet layer removed — 2D canvas comet handles rendering */}
-
-      {/* HUD overlay — only shown during play */}
       <AnimatePresence>
-        {state === 'playing' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 pointer-events-none"
-          >
-            <DetectionHUD
-              detection={detection}
-              score={score}
-              level={levelId}
-              comboMultiplier={comboMultiplier}
-              inShadow={inShadow}
-              craft={getCraft(LEVELS[levelId])}
-              earthWatching={LEVELS[levelId]?.earthBackdrop === 'watching'}
-              requiredGases={LEVELS[levelId]?.requiredGases || []}
-              usedGases={usedGases}
-              gateBlocked={gateBlocked}
-              cloakMiss={cloakMiss}
-            />
-            <ObjectivesPanel objectives={objectives} levelName={LEVELS[levelId]?.name} />
-            <div className="pointer-events-auto">
-              <GasSelector
-                activeGas={activeGas}
-                cooldowns={gasCooldowns}
-                charges={gasCharges}
-                onActivate={activateGas}
-                requiredGases={
-                  LEVELS[levelId]?.gasOrder
-                    ? [(LEVELS[levelId].requiredGases || []).find((g) => !usedGases.includes(g))].filter(Boolean)
-                    : (LEVELS[levelId]?.requiredGases || [])
-                }
-                usedGases={usedGases}
-              />
-              <EyePanel activeEye={activeEye} mythCooldown={mythCooldown} onActivate={activateEye} />
-              <SpeedControl speed={speed} onBurst={handleBurst} onSlow={handleSlow} />
-            </div>
-            <MobileControls engineRef={engineRef} />
-
-            <div className="absolute left-1/2 -translate-x-1/2 top-14 hidden md:block pointer-events-none">
-              <div
-                className="px-3 py-1.5 rounded-xl backdrop-blur-md font-orbitron text-[10px] tracking-[0.18em]"
-                style={{ background: 'rgba(5,5,18,0.58)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.42)' }}
-              >
-                WASD / ARROWS MOVE · SHIFT BURST · CTRL SLOW · Q E R GAS · 1 2 3 SENSORS · ESC PAUSE
-              </div>
-            </div>
-
-            {/* Top center — level name + pause */}
+        {playing && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 pointer-events-none">
+            <CampaignHUD hud={hud} stage={stage} />
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-none" style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }}>
-              <div
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl backdrop-blur-md pointer-events-auto"
-                style={{ background: 'rgba(5,5,18,0.72)', border: '1px solid rgba(255,255,255,0.07)' }}
-              >
-                <div className="font-orbitron text-[10px] tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  {getCraft(LEVELS[levelId]).hudLabel}
-                </div>
-                <div className="font-orbitron text-[12px] tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  {LEVELS[levelId]?.name?.toUpperCase()}
-                </div>
-                <button
-                  onClick={() => setPaused(true)}
-                  className="flex items-center gap-0.5 ml-1 opacity-50 hover:opacity-90 transition-opacity"
-                  aria-label="Pause"
-                >
-                  <div className="w-0.5 h-3 rounded-sm" style={{ background: 'rgba(255,255,255,0.7)' }} />
-                  <div className="w-0.5 h-3 rounded-sm" style={{ background: 'rgba(255,255,255,0.7)' }} />
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl backdrop-blur-md pointer-events-auto" style={{ background: 'rgba(5,5,18,0.72)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="font-orbitron text-[10px] tracking-[0.18em] text-white/40">{stage?.dateLabel}</div>
+                <div className="font-orbitron text-[12px] tracking-[0.14em] text-white/80">{stage?.name?.toUpperCase()}</div>
+                <button onClick={() => setPaused(true)} className="flex items-center gap-0.5 ml-1 opacity-60 hover:opacity-100" aria-label="Pause">
+                  <div className="w-0.5 h-3 rounded-sm bg-white/80" />
+                  <div className="w-0.5 h-3 rounded-sm bg-white/80" />
                 </button>
               </div>
             </div>
+            <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-14 pointer-events-none">
+              <div className="px-3 py-1 rounded-xl font-orbitron text-[9px] tracking-[0.14em] text-white/35" style={{ background: 'rgba(5,5,18,0.45)' }}>
+                WASD STEER · Q DIM · E VENT · R ALIGN · SHIFT BURN · ESC PAUSE
+              </div>
+            </div>
+            <CampaignControls engineRef={engineRef} controls={stage?.controls || []} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Overlays */}
       <AnimatePresence>
-        {paused && state === 'playing' && (
+        {state === 'briefing' && (
+          <BriefingScreen
+            stage={stage}
+            index={levelId}
+            total={LEVELS.length}
+            onEngage={() => { setPaused(false); setState('playing'); setGameKey((k) => k + 1); }}
+            onBack={onMainMenu}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {paused && playing && (
           <PauseMenu
             onResume={() => setPaused(false)}
             onRestart={handleRetry}
             onMainMenu={onMainMenu}
-            craft={getCraft(LEVELS[levelId])}
+            craft={getCraft(stage)}
           />
         )}
       </AnimatePresence>
@@ -345,22 +208,18 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
         <PostRunStatsScreen
           stats={postRunStats}
           isLastLevel={levelId === LEVELS.length - 1}
-          nextLabel={isHandoffLevel(levelId) ? 'SEND 3I/ATLAS' : undefined}
+          nextLabel={LEVELS[levelId + 1] ? LEVELS[levelId + 1].name.toUpperCase() : undefined}
           onPlayAgain={handleRetry}
           onNextLevel={(dest) => handleNextLevel(dest)}
           onMainMenu={onMainMenu}
         />
       )}
 
-      {state === 'dispatch' && (
-        <DispatchScreen onContinue={handleDispatchContinue} />
-      )}
-
       {state === 'game_over' && (
         <GameOverScreen
           levelId={levelId}
           reason={gameOverReason}
-          craft={getCraft(LEVELS[levelId])}
+          craft={getCraft(stage)}
           onRetry={handleRetry}
           onMainMenu={onMainMenu}
         />
@@ -373,11 +232,9 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
             setLevelId(0);
             setScore(0);
             setTotalScore(0);
-            setDetection(0);
-            setObjectives([]);
-            setActiveGas(null);
-            setState('playing');
-            setGameKey(k => k + 1);
+            setHud(null);
+            setState('briefing');
+            setGameKey((k) => k + 1);
           }}
         />
       )}

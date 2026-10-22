@@ -11,58 +11,36 @@ import { api } from '@/api/supabaseApi';
 
 const TUTORIAL_STEPS = [
   {
-    icon: '🎮',
-    title: 'Movement',
-    desc: "WASD or Arrow Keys to steer. Act I is 1I/'Oumuamua. Act II is 3I/ATLAS. On mobile, use the on-screen joystick.",
-    tip: 'Move slowly to stay undetected',
+    icon: '☄️',
+    title: 'You are 3I/ATLAS',
+    desc: 'Discovered 1 July 2025, you are filed as an interstellar comet. The ship underneath has to keep that story intact from Chile to the edge of the system.',
+    tip: 'Each stage is a real beat on the 2025–2026 trajectory',
   },
   {
-    icon: '⚡',
-    title: 'Speed Control',
-    desc: 'Hold SHIFT for burst speed. Hold CTRL to slow down. Speed directly raises detection rate.',
-    tip: 'Creep through scan zones — never burst near probes',
+    icon: '🌫️',
+    title: 'The disguise',
+    desc: 'Q dims the coma, E vents it brighter, R aligns the tail with the solar wind. The green band on a meter is what a comet is allowed to look like.',
+    tip: 'Too faint and they see the hull. Too bright and you are an engine.',
   },
   {
-    icon: '🌿',
-    title: 'Gas Release',
-    desc: 'Q = Methane (optical cloak), E = Ammonia (radar jam), R = Xenon (heat mask). 3 charges each.',
-    tip: 'Gas charges are finite — use them wisely',
+    icon: '🛰️',
+    title: 'They are already looking',
+    desc: 'Suspicion climbs when a telescope, orbiter, spectrometer, or coronagraph sees you outside the band. It falls when you look natural, or when the Sun hides you.',
+    tip: 'Hit 100% and the disguise is over',
   },
   {
-    icon: '📡',
-    title: 'Sensors',
-    desc: 'Press 1 = Night Vision, 2 = Heat Scan, 3 = Myth Mode (slow time, 20s cooldown). HUD tools only — the comet itself has no face.',
-    tip: 'Myth Mode is your panic button',
+    icon: '🧭',
+    title: 'Trajectory',
+    desc: 'WASD steers. Hard turns and Shift burns raise trajectory anomaly and, near Jupiter, a radio leak. Coast while a camera is on you. Correct in the gaps.',
+    tip: 'Non-gravitational acceleration is allowed only inside the jet window',
   },
   {
-    icon: '📡',
-    title: 'Detection Bar',
-    desc: 'Keep detection below 5% to win stealth bonus. Hit 100% and your cover is blown permanently.',
-    tip: 'Stay safe — the bar never forgives',
-  },
-  {
-    icon: '🌑',
-    title: 'Planet Shadow',
-    desc: 'Scanners cannot see through planets or moons. Hard mode is a long infiltration: wait for scan gaps, drift, and hit the HIDE markers in cover before the exit opens.',
-    tip: 'Bursting on Hard lights you up. Shadow + slow drift is the strategy.',
-  },
-  {
-    icon: '🧩',
-    title: 'Stealth puzzles',
-    desc: 'Later missions lock the exit until you spend the right cloak — sometimes in order, sometimes only while a scanner is looking at you. Wrong gas wastes a charge.',
-    tip: 'Read the mission list. REQ on a gas is the next move, not a suggestion.',
+    icon: '📅',
+    title: 'The timeline',
+    desc: 'Discovery, Hubble and JWST, the Mars passage, solar conjunction, perihelion near 1.36 AU, the morning recovery, Jupiter, then departure. The briefings separate the public record from the ship log.',
+    tip: 'Read the stage before you engage',
   },
 ];
-
-const ACTS = [
-  { title: "ACT I · 1I / 'OUMUAMUA", start: 0, end: 3, color: 'rgba(224,122,69,0.7)' },
-  { title: 'ACT II · 3I / ATLAS', start: 3, end: 8, color: 'rgba(167,139,250,0.75)' },
-  { title: 'ACT III · STEALTH PUZZLES', start: 8, end: Infinity, color: 'rgba(56,189,248,0.8)' },
-];
-const LEVEL_COLORS = ['#e07a45', '#38bdf8', '#64748b', '#7c3aed', '#0ea5e9', '#dc2626', '#f97316', '#ff6600', '#c8b97a', '#4db3c8', '#38bdf8', '#8a7a6a', '#ff6600'];
-const LEVEL_ICONS = ['☄️', '🌍', '🚪', '✨', '🪐', '🔴', '☁️', '☀️', '💍', '🌙', '🔗', '🪨', '🕳'];
-const DIFFICULTY = ['EASY', 'MEDIUM', 'MEDIUM', 'HARD', 'HARD', 'EXTREME', 'EXTREME', 'EXTREME', 'HARD', 'HARD', 'EXTREME', 'EXTREME', 'EXTREME'];
-const DIFF_COLORS = ['text-emerald-400', 'text-amber-400', 'text-amber-400', 'text-orange-400', 'text-orange-400', 'text-red-400', 'text-red-400', 'text-red-400', 'text-orange-400', 'text-orange-400', 'text-red-400', 'text-red-400', 'text-red-400'];
 
 export default function MainMenu({ onStartGame }) {
   const navigate = useNavigate();
@@ -195,8 +173,8 @@ export default function MainMenu({ onStartGame }) {
           <div className="text-xs tracking-widest mt-1 mb-1" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: "'Exo 2', sans-serif" }}>
             by <span style={{ color: 'rgba(200,180,255,0.45)' }}>Andrew Gray</span>
           </div>
-          <p className="text-sm text-white/35 mt-2 max-w-xs mx-auto leading-relaxed">
-            Start as {'\'Oumuamua'} and scope Earth. Leave the solar system. Then send 3I/ATLAS — later missions are stealth puzzles: order, timing, and which cloak you spend.
+          <p className="text-sm text-white/50 mt-2 max-w-md mx-auto leading-relaxed">
+            You are 3I/ATLAS. To the sky you are an interstellar comet. Keep the coma, the tail, and the trajectory boring — from the night you are discovered until you leave the solar system.
           </p>
         </motion.div>
 
@@ -208,21 +186,10 @@ export default function MainMenu({ onStartGame }) {
           className="w-full max-w-xl mb-6"
         >
           <div className="font-orbitron text-[11px] text-white/25 tracking-[0.3em] text-center mb-3">
-            SELECT MISSION
+            TRAJECTORY
           </div>
-
-          {ACTS.map((act) => {
-            const slice = LEVELS.slice(act.start, act.end === Infinity ? undefined : act.end);
-            if (!slice.length) return null;
-            return (
-            <div key={act.title} className="mb-4">
-              <div className="font-orbitron text-[9px] tracking-[0.28em] mb-2 px-1" style={{ color: act.color }}>
-                {act.title}
-              </div>
-              <div className={`grid gap-2 ${slice.length <= 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
-                {slice.map((level, idx) => {
-                  const i = act.start + idx;
-                  return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {LEVELS.map((level, i) => (
               <motion.button
                 key={level.id}
                 onClick={() => setSelectedLevel(i)}
@@ -233,26 +200,22 @@ export default function MainMenu({ onStartGame }) {
                     ? 'border-violet-500/70 bg-violet-900/30'
                     : 'border-white/8 bg-white/4 hover:border-white/18 hover:bg-white/6'
                   }`}
-                style={selectedLevel === i ? { boxShadow: `0 0 20px ${LEVEL_COLORS[i] || level.accent}40, 0 4px 20px rgba(0,0,0,0.4)` } : { boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}
+                style={selectedLevel === i ? { boxShadow: `0 0 20px ${level.accent}55, 0 4px 20px rgba(0,0,0,0.4)` } : { boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}
               >
-                <div className="text-base mb-1.5">{level.icon || LEVEL_ICONS[i]}</div>
-                <div className="font-orbitron text-[12px] text-white/35 mb-0.5">LVL {i + 1}</div>
+                <div className="text-base mb-1.5">{level.icon}</div>
+                <div className="font-orbitron text-[10px] text-white/35 mb-0.5">{level.dateLabel}</div>
                 <div className="font-orbitron text-[10px] font-bold text-white leading-tight">{level.name}</div>
-                <div className={`font-orbitron text-[12px] mt-1.5 ${DIFF_COLORS[i] || 'text-red-400'}`}>{level.listedDiff || DIFFICULTY[i]}</div>
                 {selectedLevel === i && (
                   <motion.div
-                    className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-violet-400"
+                    className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full"
+                    style={{ background: level.accent }}
                     animate={{ opacity: [1, 0.2, 1] }}
                     transition={{ duration: 1.2, repeat: Infinity }}
                   />
                 )}
               </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-            );
-          })}
+            ))}
+          </div>
 
           {/* Selected level description */}
           <AnimatePresence mode="wait">
@@ -337,9 +300,9 @@ export default function MainMenu({ onStartGame }) {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Orbit className="w-4 h-4 text-amber-400" />
-                <span className="font-orbitron text-xs font-bold text-amber-300">SOLAR RUN</span>
+                <span className="font-orbitron text-xs font-bold text-amber-300">FULL TIMELINE</span>
               </div>
-              <p className="text-[10px] text-white/45 leading-relaxed">Full campaign: recon as {'\'Oumuamua'}, leave the system, then infiltrate as 3I/ATLAS with Earth watching.</p>
+              <p className="text-[10px] text-white/45 leading-relaxed">All eight stages, from the Chilean discovery through perihelion to the hyperbolic exit.</p>
             </motion.button>
             <motion.button
               onClick={() => navigate(`/game?level=${daily.levelId}&difficulty=${daily.difficulty}&skin=${selectedSkin}&mode=daily`)}
@@ -401,7 +364,7 @@ export default function MainMenu({ onStartGame }) {
               }}
             >
               <Play className="w-5 h-5 fill-white" />
-              BEGIN MISSION
+              ENGAGE DISGUISE
               <ChevronRight className="w-5 h-5 opacity-70" />
             </motion.button>
           </div>
@@ -443,10 +406,10 @@ export default function MainMenu({ onStartGame }) {
           className="mt-6 mb-2 flex flex-wrap items-center justify-center gap-4 px-4"
         >
           {[
-            { icon: '⌨', label: 'WASD MOVE' },
-            { icon: '⇧', label: 'SHIFT BURST' },
-            { icon: 'Q', label: 'GAS RELEASE' },
-            { icon: '1', label: 'VISION MODES' },
+            { icon: '⌨', label: 'WASD STEER' },
+            { icon: 'Q', label: 'DIM COMA' },
+            { icon: 'E', label: 'VENT' },
+            { icon: 'R', label: 'ALIGN TAIL' },
           ].map(h => (
             <div key={h.label} className="flex items-center gap-1.5">
               <span className="font-orbitron text-[8px] px-1.5 py-0.5 rounded bg-white/8 border border-white/12 text-white/50">{h.icon}</span>
