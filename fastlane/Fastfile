@@ -1,0 +1,47 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build the iOS app (no upload)"
+  lane :build do
+    build_app(
+      project: "ios/App/App.xcodeproj",
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build/ios",
+      output_name: "3I-ATLAS.ipa",
+      clean: true,
+      skip_package_dependencies_resolution: false
+    )
+  end
+
+  desc "Upload an existing IPA to TestFlight when ASC API key env vars are set"
+  lane :beta do
+    api_key_id = ENV["APP_STORE_CONNECT_API_KEY_ID"]
+    issuer_id = ENV["APP_STORE_CONNECT_ISSUER_ID"]
+    key_content = ENV["APP_STORE_CONNECT_API_KEY_P8"]
+
+    if api_key_id.to_s.empty? || issuer_id.to_s.empty? || key_content.to_s.empty?
+      UI.important("ASC API key secrets missing — skipping TestFlight upload.")
+      next
+    end
+
+    api_key = app_store_connect_api_key(
+      key_id: api_key_id,
+      issuer_id: issuer_id,
+      key_content: key_content.gsub("\\n", "\n"),
+      is_key_content_base64: false,
+      duration: 1200,
+      in_house: false
+    )
+
+    build
+
+    pilot(
+      api_key: api_key,
+      ipa: "build/ios/3I-ATLAS.ipa",
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+end

@@ -1,0 +1,3 @@
+app_identifier("com.youneek.atlas3i")
+# Set via env in CI: APPLE_TEAM_ID
+team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]

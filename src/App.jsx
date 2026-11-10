@@ -15,6 +15,7 @@ import Store from './pages/Store.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
+import Privacy from './pages/Privacy.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
@@ -79,6 +80,7 @@ const AppRoutes = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

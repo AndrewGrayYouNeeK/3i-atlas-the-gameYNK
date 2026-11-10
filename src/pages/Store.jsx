@@ -4,6 +4,7 @@ import { ArrowLeft, Shield, Zap, Eye, Trash2 } from 'lucide-react';
 import { api } from '@/api/supabaseApi';
 import { SKINS, POWERUPS } from '../game/constants.js';
 import { useAuth } from '@/lib/AuthContext';
+import { isNativeApp } from '@/lib/native.js';
 import SkinCard from '../components/store/SkinCard.jsx';
 import {
   AlertDialog,
@@ -70,6 +71,11 @@ export default function Store({ onBack }) {
   };
 
   const handleStripeBuy = async (skin) => {
+    // App Store / Play policy: digital goods must use platform IAP, not Stripe web checkout.
+    if (isNativeApp()) {
+      window.alert('Cosmetic purchases on iOS/Android will use the store’s in-app purchase system. For now, buy skins on https://3iatlasgame.xyz or equip free skins here.');
+      return;
+    }
     setCheckoutLoadingId(skin.id);
     const response = await api.functions.invoke('createStripeCheckout', { priceId: skin.priceId });
     const url = response?.data?.url;
@@ -141,7 +147,11 @@ export default function Store({ onBack }) {
         </button>
         <div>
           <h1 className="font-orbitron text-lg font-bold text-white tracking-wider">SKIN STORE</h1>
-          <p className="text-[11px] text-white/30">Unlock comet skins with real-money purchases</p>
+          <p className="text-[11px] text-white/30">
+            {isNativeApp()
+              ? 'Equip owned skins here — paid unlocks via platform IAP (web store for now)'
+              : 'Unlock comet skins with real-money purchases'}
+          </p>
         </div>
       </div>
 
