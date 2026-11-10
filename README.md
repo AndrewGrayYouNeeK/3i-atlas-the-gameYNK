@@ -92,6 +92,18 @@ npm run dev
 
 The app will be available at `http://localhost:5173`
 
+## Native apps (App Store / Play)
+
+The same Vite build is wrapped with **Capacitor** (`ios/`, `android/`). Bundle ID: `com.youneek.atlas3i`. See **[RELEASE.md](RELEASE.md)** and **[docs/native.md](docs/native.md)** for the App Store checklist, privacy labels, and store listing copy.
+
+```bash
+npm run build:ios       # web build + cap sync ios
+npm run build:android   # web build + cap sync android
+npm run icons:native    # regenerate icons/splash from public/logo.webp
+```
+
+Web deploy is unchanged; `npm run build` still produces the Cloudflare Worker assets.
+
 ## Deploying to Production
 
 **Canonical domain:** [`https://3iatlasgame.xyz`](https://3iatlasgame.xyz)
@@ -159,21 +171,14 @@ supabase secrets set STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
 ```
 3i-atlas-the-game/
-├── src/
-│   ├── api/              # API client and helpers
-│   ├── components/       # React components
-│   │   ├── game/        # Game UI components
-│   │   ├── menu/        # Menu components
-│   │   ├── store/       # Store/shop components
-│   │   └── ui/          # Reusable UI components
-│   ├── game/            # Game engine and logic
-│   ├── hooks/           # Custom React hooks
-│   ├── lib/             # Utilities and context providers
-│   └── pages/           # Page components
-├── supabase/
-│   ├── functions/       # Edge Functions for Stripe
-│   └── schema.sql       # Database schema
-└── public/              # Static assets
+├── src/                 # React + game engine
+├── ios/                 # Capacitor Xcode project
+├── android/             # Capacitor Android project
+├── docs/app-store/      # Listing copy, privacy labels, screenshots
+├── docs/play-store/     # Play Console notes
+├── supabase/            # Schema + Edge Functions
+├── public/              # Static web assets + logo
+└── RELEASE.md           # Human checklist for App Store submit
 ```
 
 ## Contributing

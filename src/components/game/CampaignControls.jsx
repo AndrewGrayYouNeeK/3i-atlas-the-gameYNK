@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { isNativeApp } from '@/lib/native.js';
 
 function hold(engineRef, name) {
   return {
@@ -90,26 +91,37 @@ export default function CampaignControls({ engineRef, controls = [] }) {
     </button>
   );
 
+  const forceTouch = isNativeApp();
+
   return (
     <>
-      <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none md:hidden" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
-        <div className="flex items-end justify-between px-3">
+      <div
+        className={`absolute bottom-0 left-0 right-0 z-20 pointer-events-none ${forceTouch ? '' : 'md:hidden'}`}
+        style={{
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+          paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
+          paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
+        }}
+      >
+        <div className="flex items-end justify-between gap-2">
           <div
             ref={joystickRef}
-            className="pointer-events-auto w-28 h-28 rounded-full flex items-center justify-center"
+            className="pointer-events-auto w-28 h-28 rounded-full flex items-center justify-center shrink-0"
             style={{ background: 'rgba(5,6,18,0.55)', border: '1px solid rgba(255,255,255,0.1)', touchAction: 'none' }}
           >
             <div ref={knobRef} className="w-12 h-12 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
           </div>
-          <div className="pointer-events-auto flex flex-wrap justify-end gap-1.5 max-w-[60%]">
+          <div className="pointer-events-auto flex flex-wrap justify-end gap-1.5 max-w-[62%]">
             {controls.map(button)}
           </div>
         </div>
       </div>
 
-      <div className="hidden md:flex absolute bottom-4 right-4 z-20 gap-2 pointer-events-auto">
-        {controls.map(button)}
-      </div>
+      {!forceTouch && (
+        <div className="hidden md:flex absolute bottom-4 right-4 z-20 gap-2 pointer-events-auto">
+          {controls.map(button)}
+        </div>
+      )}
     </>
   );
 }

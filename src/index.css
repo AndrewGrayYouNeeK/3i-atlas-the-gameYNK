@@ -1,4 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;600&display=swap');
+@import '@fontsource/orbitron/400.css';
+@import '@fontsource/orbitron/600.css';
+@import '@fontsource/orbitron/700.css';
+@import '@fontsource/orbitron/900.css';
+@import '@fontsource/exo-2/300.css';
+@import '@fontsource/exo-2/400.css';
+@import '@fontsource/exo-2/600.css';
 
 @tailwind base;
 @tailwind components;
@@ -61,12 +67,31 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+  }
+
   body {
     @apply text-foreground;
     background: #01010c;
     font-family: 'Exo 2', sans-serif;
     overflow: hidden;
     overscroll-behavior: none;
+  }
+
+  /* Capacitor WKWebView / WebView: lock the shell; components own safe-area insets. */
+  body.native-app {
+    position: fixed;
+    inset: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.native-app #root {
+    position: fixed;
+    inset: 0;
   }
 
   button,

@@ -13,6 +13,10 @@ play the game.
 - Dev server: `npm run dev` → http://localhost:5173
 - Build: `npm run build` · Preview a build: `npm run preview`
 - Lint: `npm run lint` (ESLint flat config; passes clean)
+- Native (Capacitor): `npm run build:ios` / `npm run build:android` (web build + `cap sync`).
+  Bundle ID `com.youneek.atlas3i`. See `RELEASE.md` and `docs/native.md`.
+  After `npm ci`, always run a sync before opening Xcode — `ios/App/CapApp-SPM`
+  resolves Capacitor packages from `node_modules`.
 
 ### Non-obvious caveats
 

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">3I/ATLAS</string>
+    <string name="title_activity_main">3I/ATLAS</string>
+    <string name="package_name">com.youneek.atlas3i</string>
+    <string name="custom_url_scheme">com.youneek.atlas3i</string>
+</resources>

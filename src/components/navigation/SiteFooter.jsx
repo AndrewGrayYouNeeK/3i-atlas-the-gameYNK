@@ -12,6 +12,10 @@ export default function SiteFooter() {
         <Link to="/contact" className="font-orbitron text-[9px] tracking-widest text-white/30 hover:text-white/60 transition-colors">
           CONTACT
         </Link>
+        <span className="text-white/15 text-[9px]">·</span>
+        <Link to="/privacy" className="font-orbitron text-[9px] tracking-widest text-white/30 hover:text-white/60 transition-colors">
+          PRIVACY
+        </Link>
       </div>
     </div>
   );

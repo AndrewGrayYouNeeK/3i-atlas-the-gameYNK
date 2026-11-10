@@ -34,3 +34,15 @@ dist-ssr
 
 # local cloud credentials
 .cursor/cloudflare.env
+
+# Native / store artifacts
+build/
+*.ipa
+*.dSYM.zip
+*.mobileprovision
+*.jks
+*.keystore
+android/key.properties
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output
