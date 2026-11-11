@@ -3,7 +3,9 @@
 default_platform(:ios)
 
 BUNDLE_ID = "com.youneek.atlas3i"
-IPA_PATH = "build/ios/3I-ATLAS.ipa"
+# Fastfile lives in fastlane/; repo root is the parent.
+PROJECT_ROOT = File.expand_path("..", __dir__)
+IPA_PATH = File.join(PROJECT_ROOT, "build", "ios", "3I-ATLAS.ipa")
 
 platform :ios do
   def asc_secrets_present?
@@ -25,7 +27,7 @@ platform :ios do
   end
 
   def write_auth_key_file!
-    path = File.expand_path("build/AuthKey.p8")
+    path = File.join(PROJECT_ROOT, "build", "AuthKey.p8")
     FileUtils.mkdir_p(File.dirname(path))
     File.write(path, ENV.fetch("APP_STORE_CONNECT_API_KEY_P8").gsub("\\n", "\n"))
     path
@@ -38,7 +40,7 @@ platform :ios do
   def import_distribution_certificate!
     require "base64"
 
-    p12_path = File.expand_path("build/ios_distribution.p12")
+    p12_path = File.join(PROJECT_ROOT, "build", "ios_distribution.p12")
     FileUtils.mkdir_p(File.dirname(p12_path))
     File.binwrite(p12_path, Base64.decode64(ENV.fetch("IOS_DISTRIBUTION_CERTIFICATE_P12")))
 
@@ -53,6 +55,8 @@ platform :ios do
     )
   end
 
+  # Gym appends xcargs to both archive and exportArchive. Put auth flags here
+  # once only — do not also pass them via export_xcargs (duplicate flag → exit 64).
   def xcode_authentication_xcargs(auth_key_path)
     [
       "-allowProvisioningUpdates",
@@ -72,6 +76,7 @@ platform :ios do
     team_id = ENV.fetch("APPLE_TEAM_ID")
     auth_key_path = write_auth_key_file!
     auth_xcargs = xcode_authentication_xcargs(auth_key_path)
+    output_directory = File.join(PROJECT_ROOT, "build", "ios")
 
     if distribution_p12_present?
       UI.message("Importing IOS_DISTRIBUTION_CERTIFICATE_P12 for durable CI signing")
@@ -85,11 +90,11 @@ platform :ios do
       profile_name = lane_context[SharedValues::SIGH_NAME]
 
       build_app(
-        project: "ios/App/App.xcodeproj",
+        project: File.join(PROJECT_ROOT, "ios", "App", "App.xcodeproj"),
         scheme: "App",
         configuration: "Release",
         export_method: "app-store",
-        output_directory: "build/ios",
+        output_directory: output_directory,
         output_name: "3I-ATLAS.ipa",
         clean: true,
         skip_package_dependencies_resolution: false,
@@ -107,8 +112,7 @@ platform :ios do
           provisioningProfiles: {
             BUNDLE_ID => profile_name
           }
-        },
-        export_xcargs: auth_xcargs
+        }
       )
     else
       UI.important(
@@ -118,11 +122,11 @@ platform :ios do
       )
 
       build_app(
-        project: "ios/App/App.xcodeproj",
+        project: File.join(PROJECT_ROOT, "ios", "App", "App.xcodeproj"),
         scheme: "App",
         configuration: "Release",
         export_method: "app-store",
-        output_directory: "build/ios",
+        output_directory: output_directory,
         output_name: "3I-ATLAS.ipa",
         clean: true,
         skip_package_dependencies_resolution: false,
@@ -135,8 +139,7 @@ platform :ios do
           method: "app-store",
           teamID: team_id,
           signingStyle: "automatic"
-        },
-        export_xcargs: auth_xcargs
+        }
       )
     end
   end

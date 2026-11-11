@@ -76,6 +76,7 @@ Without the `.p12` secrets, the workflow falls back to Xcode automatic signing w
 1. Add the required secrets (and the recommended `.p12` pair).
 2. Ensure App Store Connect has an iOS app whose Bundle ID is exactly `com.youneek.atlas3i`.
 3. Actions → **iOS build / TestFlight** → **Run workflow**, or push to `main` under the watched paths.
+   Pull requests only run the unsigned Xcode 26 compile; signed archive + TestFlight upload run on `main` pushes and `workflow_dispatch`.
 
 ---
 

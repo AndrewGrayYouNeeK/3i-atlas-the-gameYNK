@@ -91,7 +91,10 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build
 
+      # Signed archive + TestFlight only on main / manual runs. PRs stay unsigned so
+      # compile checks stay green while ASC app / distribution cert secrets are set up.
       - name: TestFlight upload (only when ASC secrets exist)
+        if: github.event_name != 'pull_request'
         env:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
