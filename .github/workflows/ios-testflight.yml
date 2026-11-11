@@ -19,6 +19,8 @@ on:
       - 'capacitor.config.json'
       - 'package.json'
       - 'package-lock.json'
+      - 'fastlane/**'
+      - '.github/workflows/ios-testflight.yml'
   workflow_dispatch:
 
 concurrency:
@@ -27,7 +29,9 @@ concurrency:
 
 jobs:
   ios:
-    runs-on: macos-15
+    # macos-26 ships Xcode 26.x / iOS 26 SDK (required for new App Store uploads).
+    # Do not build iOS on Linux.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +39,37 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Select Xcode 26 (iOS 26 SDK)
+        run: |
+          set -euo pipefail
+          XCODE_APP=""
+          if [ -d /Applications/Xcode_26.app ]; then
+            XCODE_APP=/Applications/Xcode_26.app
+          else
+            # Prefer the highest installed Xcode 26.x (e.g. Xcode_26.6.app).
+            XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
+          fi
+          if [ -z "${XCODE_APP}" ] && [ -d /Applications/Xcode.app ]; then
+            XCODE_APP=/Applications/Xcode.app
+          fi
+          if [ -z "${XCODE_APP}" ]; then
+            echo "No Xcode 26 installation found under /Applications" >&2
+            ls -d /Applications/Xcode*.app 2>/dev/null || true
+            exit 1
+          fi
+          sudo xcode-select -s "${XCODE_APP}"
+          echo "Using ${XCODE_APP}"
+          xcodebuild -version
+          SDK_VER="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iPhoneOS SDK: ${SDK_VER}"
+          case "${SDK_VER}" in
+            26.*) ;;
+            *)
+              echo "Expected iOS 26.x SDK for App Store uploads; got ${SDK_VER}" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Install JS dependencies
         run: npm ci
@@ -45,7 +80,6 @@ jobs:
       - name: Compile iOS (unsigned)
         run: |
           set -euo pipefail
-          sudo xcode-select -s /Applications/Xcode.app
           xcodebuild \
             -project ios/App/App.xcodeproj \
             -scheme App \
@@ -63,13 +97,15 @@ jobs:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Optional but recommended on GitHub-hosted runners (see RELEASE.md):
+          IOS_DISTRIBUTION_CERTIFICATE_P12: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_P12 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
         run: |
           if [ -z "${APP_STORE_CONNECT_API_KEY_ID:-}" ] || [ -z "${APP_STORE_CONNECT_ISSUER_ID:-}" ] || [ -z "${APP_STORE_CONNECT_API_KEY_P8:-}" ] || [ -z "${APPLE_TEAM_ID:-}" ]; then
             echo "ASC API key / Apple Team secrets not set — skipping TestFlight upload."
             echo "See RELEASE.md for the secrets to add."
             exit 0
           fi
+          # macos-26 images include fastlane; install ensures a recent gem if needed.
           gem install fastlane -N
-          # Signed distribution still needs a valid provisioning profile on the runner.
-          # When secrets + signing are configured, this runs the beta lane.
           fastlane ios beta

@@ -40,6 +40,8 @@ build/
 *.ipa
 *.dSYM.zip
 *.mobileprovision
+*.p8
+*.p12
 *.jks
 *.keystore
 android/key.properties
