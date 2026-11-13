@@ -9,6 +9,7 @@ The Vite/React game is wrapped with **Capacitor 8**. Web deploy (Cloudflare Work
 | Version | `1.0.0` (build `1`) |
 | Orientations | Portrait + landscape (iPhone & iPad) |
 | Config | `capacitor.config.json` |
+| CI (TestFlight) | `.github/workflows/ios-testflight.yml` on `macos-26` / Xcode 26 — see `RELEASE.md` |
 
 ## Scripts
 

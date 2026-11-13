@@ -1,3 +1,5 @@
+# Must match Capacitor appId and Xcode PRODUCT_BUNDLE_IDENTIFIER.
+# Do not switch to com.youneekproradar.andrewgray.
 app_identifier("com.youneek.atlas3i")
 # Set via env in CI: APPLE_TEAM_ID
 team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]

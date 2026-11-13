@@ -42,17 +42,41 @@ npx cap open ios           # opens Xcode
 
 GitHub Actions workflow: `.github/workflows/ios-testflight.yml`
 
-Add repository secrets (skipped gracefully if missing):
+- Runner: **`macos-26`** (Xcode 26 / iOS 26 SDK — required for new App Store uploads)
+- Bundle ID stays **`com.youneek.atlas3i`** (do not use `com.youneekproradar.andrewgray`)
+- PRs / pushes without secrets: unsigned compile only
+- With secrets: signed App Store IPA via fastlane, then `pilot` upload to TestFlight
+
+#### Required repository secrets
 
 | Secret | Purpose |
 |--------|---------|
 | `APP_STORE_CONNECT_API_KEY_ID` | ASC API Key ID |
 | `APP_STORE_CONNECT_ISSUER_ID` | ASC Issuer ID |
-| `APP_STORE_CONNECT_API_KEY_P8` | Contents of the `.p8` private key |
-| `APPLE_TEAM_ID` | 10-character Team ID |
-| `MATCH_GIT_BASIC_AUTHORIZATION` or cert secrets | Only if you switch from automatic Xcode Cloud/manual signing to match — current workflow uses `xcodebuild` + `fastlane pilot` with an ASC API key when present |
+| `APP_STORE_CONNECT_API_KEY_P8` | Full contents of the `.p8` private key (PEM text; `\n` escapes OK) |
+| `APPLE_TEAM_ID` | 10-character Apple Team ID |
 
-Create an App Store Connect API key (Developer → Users and Access → Integrations → App Store Connect API) with **App Manager** or **Admin**.
+Create an App Store Connect **Team** API key (Users and Access → Integrations → App Store Connect API). Use **Admin** if you want Xcode automatic signing to create/manage distribution certificates on CI; **App Manager** is enough for TestFlight upload once a certificate already exists.
+
+#### Recommended extra secrets (GitHub-hosted runners)
+
+The ASC `.p8` authenticates App Store Connect (profiles + upload) but **does not contain** the iOS Distribution certificate private key. On ephemeral GitHub-hosted runners that key is lost when the job ends, so durable signed builds need a `.p12`:
+
+| Secret | Purpose |
+|--------|---------|
+| `IOS_DISTRIBUTION_CERTIFICATE_P12` | Base64-encoded Apple Distribution `.p12` (`base64 -i dist.p12 \| pbcopy` on macOS) |
+| `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` | Password for that `.p12` (empty string secret if the p12 has no password) |
+
+Create the Distribution certificate once in [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/certificates/list) (or via Xcode on a Mac), export the private key as `.p12`, and store it only in GitHub secrets — never commit it.
+
+Without the `.p12` secrets, the workflow falls back to Xcode automatic signing with `-allowProvisioningUpdates` and the ASC authentication key. That can work for a first upload with an **Admin** API key, but is fragile on hosted runners.
+
+#### Run the workflow
+
+1. Add the required secrets (and the recommended `.p12` pair).
+2. Ensure App Store Connect has an iOS app whose Bundle ID is exactly `com.youneek.atlas3i`.
+3. Actions → **iOS build / TestFlight** → **Run workflow**, or push to `main` under the watched paths.
+   Pull requests only run the unsigned Xcode 26 compile; signed archive + TestFlight upload run on `main` pushes and `workflow_dispatch`.
 
 ---
 
