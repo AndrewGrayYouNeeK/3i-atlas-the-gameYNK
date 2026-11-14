@@ -8,6 +8,7 @@ import AchievementsPanel from '../components/menu/AchievementsPanel.jsx';
 import SkinSelector from '../components/menu/SkinSelector.jsx';
 import CometLogo from '../components/menu/CometLogo.jsx';
 import { api } from '@/api/supabaseApi';
+import { mergeOwnedSkins } from '@/lib/iapLocalOwnership.js';
 
 const TUTORIAL_STEPS = [
   {
@@ -56,13 +57,16 @@ export default function MainMenu({ onStartGame }) {
   const animRef = useRef(null);
 
   useEffect(() => {
+    // Device IAP unlocks are available even before sign-in
+    setOwnedSkins(mergeOwnedSkins(['default']));
+
     api.auth.me().then(async (me) => {
       if (!me) return;
       try {
         const profiles = await api.entities.PlayerProfile.filter({ user_email: me.email });
         const profile = profiles?.[0];
         if (profile) {
-          setOwnedSkins(profile.owned_skins || ['default']);
+          setOwnedSkins(mergeOwnedSkins(profile.owned_skins || ['default']));
           setSelectedSkin(profile.selected_skin || 'default');
           setProfileId(profile.id);
         }

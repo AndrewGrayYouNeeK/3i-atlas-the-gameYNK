@@ -27,7 +27,9 @@ Set in `capacitor.config.json`, Xcode `PRODUCT_BUNDLE_IDENTIFIER`, and Android
 6. Fill App Privacy (“nutrition labels”) using `docs/app-store/PRIVACY_LABELS.md`.
 7. Paste listing copy from `docs/app-store/LISTING.md`; upload screenshots from `docs/app-store/screenshots/`.
 8. Age rating questionnaire answers: see `docs/app-store/LISTING.md`.
-9. Build locally or via CI, then upload to TestFlight and submit for review.
+9. Create the five non-consumable IAP products from `docs/app-store/IAP_PRODUCTS.md`, enable the **In-App Purchase** capability on the App ID / Xcode target, and accept the Paid Applications agreement.
+10. Deploy Supabase function `verifyApplePurchase` and set optional `APPLE_IAP_*` secrets (same doc).
+11. Build locally or via CI, then upload to TestFlight and submit for review.
 
 ### Local iOS build (Mac with Xcode)
 
