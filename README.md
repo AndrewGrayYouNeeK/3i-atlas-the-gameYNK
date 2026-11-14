@@ -47,7 +47,7 @@ Placeholder Supabase values are enough to play offline. Auth, leaderboard, and t
 - **Frontend**: React 18, Vite, TailwindCSS, Framer Motion
 - **Graphics**: Canvas 2D — parallax starfields, particle coma and tails, bloom. Three.js is still installed for older scene code.
 - **Backend**: Supabase (Auth, Database, Edge Functions)
-- **Payments**: Stripe (optional, for in-app purchases)
+- **Payments**: Stripe (web cosmetic skins) · Apple IAP via `@capgo/native-purchases` (iOS)
 
 ## Running Locally
 
@@ -146,7 +146,7 @@ Prefer the Cloudflare Worker path above so DNS stays on Cloudflare.
 
 ### Edge Functions Deployment
 
-If you're using Stripe payments, deploy the Edge Functions to Supabase:
+If you're using Stripe and/or Apple IAP, deploy the Edge Functions to Supabase:
 
 ```bash
 # Install Supabase CLI
@@ -161,10 +161,17 @@ supabase link --project-ref your-project-ref
 # Deploy functions
 supabase functions deploy createStripeCheckout
 supabase functions deploy stripeWebhook
+supabase functions deploy verifyApplePurchase
 
-# Set secrets
+# Stripe secrets (web checkout)
 supabase secrets set STRIPE_SECRET_KEY=your_stripe_secret_key
 supabase secrets set STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+
+# Optional but recommended — App Store Server API (iOS IAP confirmation)
+# See docs/app-store/IAP_PRODUCTS.md
+supabase secrets set APPLE_IAP_ISSUER_ID=...
+supabase secrets set APPLE_IAP_KEY_ID=...
+supabase secrets set APPLE_IAP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 ```
 
 ## Project Structure

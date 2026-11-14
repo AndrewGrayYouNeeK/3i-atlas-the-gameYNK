@@ -30,7 +30,7 @@ Collect data only when the player opts into an **optional account** (leaderboard
 |-----------|------------|---------|-----------|----------|
 | Purchase History (cosmetic skins) | Yes if store used | Yes | No | App Functionality |
 
-Payment card data is handled by Stripe (web) — not stored by the app. Until native StoreKit IAP is added, treat paid skins as web-only.
+Payment card data is handled by Stripe (web) or Apple (native IAP) — not stored by the app. Native iOS uses StoreKit non-consumables; see `docs/app-store/IAP_PRODUCTS.md`.
 
 ### Identifiers / Usage / Diagnostics
 
