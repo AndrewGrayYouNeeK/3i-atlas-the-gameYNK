@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
+import { useTouchUi } from '@/lib/touchUi.js';
 
 export default function BriefingScreen({ stage, index, total, onEngage, onBack }) {
+  const touchUi = useTouchUi();
   if (!stage) return null;
   return (
     <motion.div
@@ -50,19 +52,28 @@ export default function BriefingScreen({ stage, index, total, onEngage, onBack }
 
         <div className="flex flex-wrap gap-2 mb-6">
           {stage.controls.map((control) => (
-            <div key={control.id} className="px-2.5 py-1.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <span className="font-orbitron text-[10px] text-white/80">{control.key}</span>
-              <span className="text-[11px] text-white/45 ml-2">{control.label}</span>
+            <div key={control.id} className="px-2.5 py-1.5 rounded-xl min-h-[44px] flex items-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              {!touchUi && (
+                <span className="font-orbitron text-[10px] text-white/80 mr-2">{control.key}</span>
+              )}
+              <span className={`text-[11px] ${touchUi ? 'text-white/80 font-orbitron tracking-wider' : 'text-white/45'}`}>{control.label}</span>
             </div>
           ))}
-          <div className="px-2.5 py-1.5 rounded-xl text-[11px] text-white/45" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            WASD steer
-          </div>
+          {!touchUi && (
+            <div className="px-2.5 py-1.5 rounded-xl text-[11px] text-white/45" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              WASD steer
+            </div>
+          )}
+          {touchUi && (
+            <div className="px-2.5 py-1.5 rounded-xl text-[11px] text-white/45 min-h-[44px] flex items-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              Joystick to steer
+            </div>
+          )}
         </div>
 
         <button
           onClick={onEngage}
-          className="w-full py-4 rounded-2xl font-orbitron text-sm tracking-[0.18em] text-white"
+          className="w-full min-h-[48px] py-4 rounded-2xl font-orbitron text-sm tracking-[0.18em] text-white"
           style={{ background: 'linear-gradient(135deg,#7c3aed,#5b21b6)', boxShadow: '0 0 28px rgba(124,58,237,0.45)' }}
         >
           ENGAGE DISGUISE

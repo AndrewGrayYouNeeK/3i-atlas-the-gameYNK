@@ -95,4 +95,4 @@ Expected rating band: **4+** or **9+** depending on Apple’s automation for “
 
 ## In-App Purchases note
 
-If cosmetic skins via Stripe are enabled in the native build, declare them as consumable/non-consumable IAP **or** keep purchases web-only and disable the store pay flow in native until App Store IAP is wired. Current web Stripe Checkout is not App Store IAP — for v1 submit, either leave skins free/local or gate paid store behind “available on web.”
+Native iOS sells cosmetic skins only through Apple IAP (non-consumable). Product IDs, display names, and suggested price tiers: **`docs/app-store/IAP_PRODUCTS.md`**. The web build continues to use Stripe Checkout; the native Store does not link or steer users to the website for purchases.

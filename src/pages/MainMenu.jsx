@@ -8,6 +8,7 @@ import AchievementsPanel from '../components/menu/AchievementsPanel.jsx';
 import SkinSelector from '../components/menu/SkinSelector.jsx';
 import CometLogo from '../components/menu/CometLogo.jsx';
 import { api } from '@/api/supabaseApi';
+import { mergeOwnedSkins } from '@/lib/iapLocalOwnership.js';
 
 const TUTORIAL_STEPS = [
   {
@@ -56,13 +57,21 @@ export default function MainMenu({ onStartGame }) {
   const animRef = useRef(null);
 
   useEffect(() => {
+    document.body.classList.toggle('atlas-tutorial-open', showTutorial);
+    return () => document.body.classList.remove('atlas-tutorial-open');
+  }, [showTutorial]);
+
+  useEffect(() => {
+    // Device IAP unlocks are available even before sign-in
+    setOwnedSkins(mergeOwnedSkins(['default']));
+
     api.auth.me().then(async (me) => {
       if (!me) return;
       try {
         const profiles = await api.entities.PlayerProfile.filter({ user_email: me.email });
         const profile = profiles?.[0];
         if (profile) {
-          setOwnedSkins(profile.owned_skins || ['default']);
+          setOwnedSkins(mergeOwnedSkins(profile.owned_skins || ['default']));
           setSelectedSkin(profile.selected_skin || 'default');
           setProfileId(profile.id);
         }
@@ -426,8 +435,14 @@ export default function MainMenu({ onStartGame }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,10,0.88)', backdropFilter: 'blur(8px)' }}
+            className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+            style={{
+              background: 'rgba(0,0,10,0.88)',
+              backdropFilter: 'blur(8px)',
+              // Tab bar is hidden via body.atlas-tutorial-open; keep home-indicator inset.
+              paddingTop: 'max(16px, env(safe-area-inset-top, 0px))',
+              paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))',
+            }}
             onClick={() => setShowTutorial(false)}
           >
             <motion.div
@@ -436,7 +451,7 @@ export default function MainMenu({ onStartGame }) {
               exit={{ y: 40, opacity: 0, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 28 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-sm rounded-3xl overflow-hidden"
+              className="w-full max-w-sm rounded-3xl overflow-hidden max-h-full overflow-y-auto"
               style={{ background: 'rgba(12,8,28,0.98)', border: '1px solid rgba(140,80,255,0.25)', boxShadow: '0 32px 80px rgba(0,0,0,0.8), 0 0 40px rgba(100,60,200,0.15)' }}
             >
               {/* Progress bar */}
@@ -484,14 +499,14 @@ export default function MainMenu({ onStartGame }) {
                   <button
                     onClick={() => setTutorialStep(Math.max(0, tutorialStep - 1))}
                     disabled={tutorialStep === 0}
-                    className="flex-1 py-3 rounded-2xl border border-white/10 font-orbitron text-xs text-white/40 disabled:opacity-20 hover:bg-white/5 transition-all duration-200"
+                    className="flex-1 min-h-[44px] py-3 rounded-2xl border border-white/10 font-orbitron text-xs text-white/40 disabled:opacity-20 hover:bg-white/5 transition-all duration-200"
                   >
                     PREV
                   </button>
                   {tutorialStep < TUTORIAL_STEPS.length - 1 ? (
                     <button
                       onClick={() => setTutorialStep(tutorialStep + 1)}
-                      className="flex-2 flex-grow py-3 rounded-2xl font-orbitron text-xs text-white transition-all duration-200"
+                      className="flex-2 flex-grow min-h-[44px] py-3 rounded-2xl font-orbitron text-xs text-white transition-all duration-200"
                       style={{ background: 'linear-gradient(135deg,#7c3aed,#5b21b6)', boxShadow: '0 4px 16px rgba(100,60,200,0.4)' }}
                     >
                       NEXT →
@@ -499,7 +514,7 @@ export default function MainMenu({ onStartGame }) {
                   ) : (
                     <button
                       onClick={() => setShowTutorial(false)}
-                      className="flex-2 flex-grow py-3 rounded-2xl font-orbitron text-xs text-white transition-all duration-200"
+                      className="flex-2 flex-grow min-h-[44px] py-3 rounded-2xl font-orbitron text-xs text-white transition-all duration-200"
                       style={{ background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 4px 16px rgba(5,150,105,0.4)' }}
                     >
                       LET'S GO ✓

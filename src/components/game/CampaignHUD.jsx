@@ -13,7 +13,7 @@ function Bar({ label, value, color, goodBand, cap, hint }) {
   const pct = Math.max(0, Math.min(100, value * 100));
   const hot = cap != null && value > cap;
   return (
-    <div className="min-w-[148px]">
+    <div className="min-w-[120px] flex-1 basis-[120px] max-w-[180px]">
       <div className="flex items-baseline justify-between gap-2 mb-0.5">
         <span className="font-orbitron text-[8px] tracking-[0.16em] text-white/45">{label}</span>
         {hint && <span className="font-orbitron text-[8px] text-white/35">{hint}</span>}
@@ -34,6 +34,11 @@ function Bar({ label, value, color, goodBand, cap, hint }) {
   );
 }
 
+/**
+ * Flex-column HUD: top meters + bottom objective.
+ * Parent must be a column flex child with flex-1 so the objective
+ * sits flush against CampaignControls below (no absolute bottom overlap).
+ */
 export default function CampaignHUD({ hud, stage }) {
   if (!hud || !stage) return null;
   const suspicion = hud.suspicion || 0;
@@ -43,11 +48,17 @@ export default function CampaignHUD({ hud, stage }) {
   const meters = new Set(hud.meters || []);
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10">
-      <div className="absolute left-3 right-3 flex flex-col gap-2" style={{ top: 'calc(env(safe-area-inset-top) + 52px)' }}>
+    <div className="flex-1 min-h-0 flex flex-col pointer-events-none z-10 w-full">
+      <div
+        className="shrink-0 flex flex-col gap-2 overflow-y-auto max-h-[42%]"
+        style={{
+          paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
+          paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
+        }}
+      >
         <div className="flex flex-wrap items-start gap-2">
           <div
-            className="px-3 py-2.5 rounded-2xl backdrop-blur-md min-w-[200px] flex-1 max-w-sm"
+            className="px-3 py-2.5 rounded-2xl backdrop-blur-md min-w-[160px] flex-1 max-w-sm"
             style={{ background: 'rgba(5,6,16,0.72)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
             <div className="flex items-center justify-between mb-1.5">
@@ -80,7 +91,7 @@ export default function CampaignHUD({ hud, stage }) {
           </div>
 
           <div
-            className="px-3 py-2 rounded-2xl backdrop-blur-md flex flex-col gap-1.5"
+            className="px-3 py-2 rounded-2xl backdrop-blur-md flex flex-wrap gap-x-3 gap-y-1.5 flex-1"
             style={{ background: 'rgba(5,6,16,0.66)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
             {meters.has('coma') && (
@@ -114,7 +125,7 @@ export default function CampaignHUD({ hud, stage }) {
               <Bar label="FADE MATCH" value={hud.curve} color="#f9a8d4" hint={`target ${Math.round((hud.targetBrightness || 0) * 100)}`} />
             )}
             {meters.has('spectrum') && (
-              <div className="min-w-[148px]">
+              <div className="min-w-[120px] flex-1 basis-[140px] max-w-[200px]">
                 <div className="font-orbitron text-[8px] tracking-[0.16em] text-white/45 mb-1">SPECTRUM · CO₂ RICH</div>
                 {[
                   ['CO₂', hud.co2, '#c4b5fd', 0.7],
@@ -132,7 +143,7 @@ export default function CampaignHUD({ hud, stage }) {
               </div>
             )}
             {meters.has('locks') && (
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 {(hud.lockNames || []).map((name, i) => (
                   <span
                     key={name}
@@ -162,9 +173,18 @@ export default function CampaignHUD({ hud, stage }) {
         )}
       </div>
 
+      <div className="flex-1 min-h-0" aria-hidden />
+
       <div
-        className="absolute left-1/2 -translate-x-1/2 w-[min(560px,calc(100%-1.5rem))] px-3 py-2 rounded-2xl backdrop-blur-md bottom-40 md:bottom-6"
-        style={{ background: 'rgba(5,6,16,0.7)', border: '1px solid rgba(255,255,255,0.08)' }}
+        className="shrink-0 w-full px-3 py-2 rounded-t-2xl backdrop-blur-md md:pr-52"
+        style={{
+          background: 'rgba(5,6,16,0.78)',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          borderLeft: '1px solid rgba(255,255,255,0.08)',
+          borderRight: '1px solid rgba(255,255,255,0.08)',
+          paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
+          paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
+        }}
       >
         <div className="flex items-center justify-between gap-3 mb-1">
           <span className="font-orbitron text-[8px] tracking-[0.18em] text-white/40">OBJECTIVE</span>

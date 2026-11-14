@@ -11,6 +11,7 @@ import EndgameScreen from '../components/game/EndgameScreen.jsx';
 import { LEVELS, getCraft } from '../game/constants.js';
 import { getDailyChallenge } from '../game/dailyChallenge.js';
 import { api } from '@/api/supabaseApi';
+import { useTouchUi } from '@/lib/touchUi.js';
 
 export default function Game({ levelId: initialLevel = 0, difficulty = 'medium', skin = 'default', mode = 'mission', onMainMenu, totalScoreRef }) {
   const dailyChallenge = useMemo(() => (mode === 'daily' ? getDailyChallenge() : null), [mode]);
@@ -32,6 +33,7 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
   const [gameOverReason, setGameOverReason] = useState('detected');
   const engineRef = useRef(null);
   const stage = LEVELS[levelId];
+  const touchUi = useTouchUi();
 
   useEffect(() => {
     const next = Math.max(0, Math.min(LEVELS.length - 1, initialLevel || 0));
@@ -159,23 +161,41 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
 
       <AnimatePresence>
         {playing && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 pointer-events-none">
-            <CampaignHUD hud={hud} stage={stage} />
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 pointer-events-none" style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }}>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl backdrop-blur-md pointer-events-auto" style={{ background: 'rgba(5,5,18,0.72)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 pointer-events-none flex flex-col"
+            style={{
+              paddingTop: 'env(safe-area-inset-top, 0px)',
+              paddingLeft: 'env(safe-area-inset-left, 0px)',
+              paddingRight: 'env(safe-area-inset-right, 0px)',
+              // Touch: bottom inset lives in CampaignControls so objective sits flush on top of it.
+              // Desktop: keep a bottom pad so the objective clears the right-side action strip.
+              paddingBottom: touchUi ? 0 : 'max(1.25rem, env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            <div className="shrink-0 flex flex-col items-center gap-1.5 pt-2 pb-2 px-3">
+              <div className="flex items-center gap-2 px-3 min-h-[44px] rounded-xl backdrop-blur-md pointer-events-auto" style={{ background: 'rgba(5,5,18,0.72)', border: '1px solid rgba(255,255,255,0.07)' }}>
                 <div className="font-orbitron text-[10px] tracking-[0.18em] text-white/40">{stage?.dateLabel}</div>
                 <div className="font-orbitron text-[12px] tracking-[0.14em] text-white/80">{stage?.name?.toUpperCase()}</div>
-                <button onClick={() => setPaused(true)} className="flex items-center gap-0.5 ml-1 opacity-60 hover:opacity-100" aria-label="Pause">
+                <button
+                  onClick={() => setPaused(true)}
+                  className="min-w-[44px] min-h-[44px] -mr-1 flex items-center justify-center gap-0.5 opacity-70 hover:opacity-100"
+                  aria-label="Pause"
+                >
                   <div className="w-0.5 h-3 rounded-sm bg-white/80" />
                   <div className="w-0.5 h-3 rounded-sm bg-white/80" />
                 </button>
               </div>
+              {!touchUi && (
+                <div className="hidden md:block px-3 py-1 rounded-xl font-orbitron text-[9px] tracking-[0.14em] text-white/35" style={{ background: 'rgba(5,5,18,0.45)' }}>
+                  WASD STEER · Q DIM · E VENT · R ALIGN · SHIFT BURN · ESC PAUSE
+                </div>
+              )}
             </div>
-            <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-14 pointer-events-none">
-              <div className="px-3 py-1 rounded-xl font-orbitron text-[9px] tracking-[0.14em] text-white/35" style={{ background: 'rgba(5,5,18,0.45)' }}>
-                WASD STEER · Q DIM · E VENT · R ALIGN · SHIFT BURN · ESC PAUSE
-              </div>
-            </div>
+
+            <CampaignHUD hud={hud} stage={stage} />
             <CampaignControls engineRef={engineRef} controls={stage?.controls || []} />
           </motion.div>
         )}

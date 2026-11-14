@@ -36,3 +36,12 @@ npm run screenshots:app-store
 2. Update Xcode `PRODUCT_BUNDLE_IDENTIFIER` (or re-add ios)
 3. Update Android `applicationId` / `namespace` in `android/app/build.gradle`
 4. `npm run sync:native`
+
+## Apple In-App Purchases (cosmetic skins)
+
+- Plugin: `@capgo/native-purchases` (StoreKit 2)
+- Product map: `src/lib/iapProducts.js` → `com.youneek.atlas3i.skin.<skinId>`
+- Catalog / ASC checklist: `docs/app-store/IAP_PRODUCTS.md`
+- Native Store: purchase + **Restore** via StoreKit; web Store keeps Stripe
+- Ownership: local unlock on device + Supabase `verifyApplePurchase` when signed in
+- After `npm ci`, run `npx cap sync ios` so CapApp-SPM picks up the plugin

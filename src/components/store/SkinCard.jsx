@@ -2,8 +2,9 @@ import { motion } from 'framer-motion';
 import { Lock, Check, CreditCard } from 'lucide-react';
 import SkinPreviewCanvas from './SkinPreviewCanvas.jsx';
 
-export default function SkinCard({ skin, owned, selected, onBuy, onEquip, loading }) {
+export default function SkinCard({ skin, owned, selected, onBuy, onEquip, loading, priceLabel = null, buyLabel = 'OPENING...' }) {
   const isFree = skin.unlockType === 'free';
+  const displayPrice = priceLabel || (typeof skin.price === 'number' ? `$${skin.price.toFixed(2)}` : '');
 
   return (
     <motion.div
@@ -74,11 +75,11 @@ export default function SkinCard({ skin, owned, selected, onBuy, onEquip, loadin
             }}
           >
             {loading ? (
-              <span className="animate-pulse">OPENING...</span>
+              <span className="animate-pulse">{buyLabel}</span>
             ) : (
               <>
                 <CreditCard className="w-3 h-3" />
-                BUY — ${skin.price.toFixed(2)}
+                BUY — {displayPrice}
               </>
             )}
           </button>
