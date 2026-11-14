@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { Play, Home, RotateCcw } from 'lucide-react';
+import { useTouchUi } from '@/lib/touchUi.js';
 
 export default function PauseMenu({ onResume, onRestart, onMainMenu, craft }) {
+  const touchUi = useTouchUi();
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -72,9 +74,11 @@ export default function PauseMenu({ onResume, onRestart, onMainMenu, craft }) {
             </motion.button>
           </div>
 
-          <div className="mt-6 font-orbitron text-[8px] tracking-widest" style={{ color: 'rgba(255,255,255,0.18)' }}>
-            ESC TO RESUME
-          </div>
+          {!touchUi && (
+            <div className="mt-6 font-orbitron text-[8px] tracking-widest" style={{ color: 'rgba(255,255,255,0.18)' }}>
+              ESC TO RESUME
+            </div>
+          )}
         </div>
       </motion.div>
     </motion.div>

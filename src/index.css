@@ -94,6 +94,12 @@
     inset: 0;
   }
 
+  /* How to Play modal owns the lower screen — hide the tab bar underneath it. */
+  body.atlas-tutorial-open .atlas-bottom-nav {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   button,
   [role="button"],
   canvas,
