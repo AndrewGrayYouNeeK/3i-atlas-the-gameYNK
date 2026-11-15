@@ -12,6 +12,7 @@ import { LEVELS, getCraft } from '../game/constants.js';
 import { getDailyChallenge } from '../game/dailyChallenge.js';
 import { api } from '@/api/supabaseApi';
 import { useTouchUi } from '@/lib/touchUi.js';
+import { registerAndroidBackHandler } from '@/lib/androidBackButton.js';
 
 export default function Game({ levelId: initialLevel = 0, difficulty = 'medium', skin = 'default', mode = 'mission', onMainMenu, totalScoreRef }) {
   const dailyChallenge = useMemo(() => (mode === 'daily' ? getDailyChallenge() : null), [mode]);
@@ -45,6 +46,26 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
     setState('briefing');
     setGameKey((k) => k + 1);
   }, [initialLevel, difficulty]);
+
+  useEffect(() => {
+    return registerAndroidBackHandler(() => {
+      if (state === 'playing' && !paused) {
+        setPaused(true);
+        return true;
+      }
+      if (paused) {
+        setPaused(false);
+        onMainMenu?.();
+        return true;
+      }
+      if (state === 'briefing' || state === 'gameover' || state === 'stats' || state === 'endgame') {
+        onMainMenu?.();
+        return true;
+      }
+      onMainMenu?.();
+      return true;
+    });
+  }, [state, paused, onMainMenu]);
 
   useEffect(() => {
     const handleKey = (e) => {

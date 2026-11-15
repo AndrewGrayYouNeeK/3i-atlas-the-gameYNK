@@ -32,4 +32,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required for Google Play Billing (cosmetic skin IAPs). -->
+    <uses-permission android:name="com.android.vending.BILLING" />
 </manifest>

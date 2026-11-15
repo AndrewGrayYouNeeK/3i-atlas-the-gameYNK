@@ -47,7 +47,7 @@ Placeholder Supabase values are enough to play offline. Auth, leaderboard, and t
 - **Frontend**: React 18, Vite, TailwindCSS, Framer Motion
 - **Graphics**: Canvas 2D — parallax starfields, particle coma and tails, bloom. Three.js is still installed for older scene code.
 - **Backend**: Supabase (Auth, Database, Edge Functions)
-- **Payments**: Stripe (web cosmetic skins) · Apple IAP via `@capgo/native-purchases` (iOS)
+- **Payments**: Stripe (web) · Apple IAP / Google Play Billing via `@capgo/native-purchases` (native; never Stripe in-app)
 
 ## Running Locally
 
@@ -94,11 +94,14 @@ The app will be available at `http://localhost:5173`
 
 ## Native apps (App Store / Play)
 
-The same Vite build is wrapped with **Capacitor** (`ios/`, `android/`). Bundle ID: `com.youneek.atlas3i`. See **[RELEASE.md](RELEASE.md)** and **[docs/native.md](docs/native.md)** for the App Store checklist, privacy labels, and store listing copy.
+The same Vite build is wrapped with **Capacitor** (`ios/`, `android/`). Bundle ID: `com.youneek.atlas3i`.
+See **[RELEASE.md](RELEASE.md)**, **[docs/native.md](docs/native.md)**, and **[docs/play-store/SETUP.md](docs/play-store/SETUP.md)**
+(Play Console, upload keystore, IAP products, GitHub secrets).
 
 ```bash
 npm run build:ios       # web build + cap sync ios
-npm run build:android   # web build + cap sync android
+npm run build:android   # web build + cap sync android (+ Play display name)
+npm run bundle:android  # signed/unsigned release AAB
 npm run icons:native    # regenerate icons/splash from public/logo.webp
 ```
 

@@ -82,19 +82,20 @@ Without the `.p12` secrets, the workflow falls back to Xcode automatic signing w
 
 ---
 
-## Google Play (optional, low extra effort)
+## Google Play
 
-1. Create a [Play Console](https://play.google.com/console) app: **3I/ATLAS**, package `com.youneek.atlas3i`.
-2. On a machine with Android SDK:
+Full step-by-step (Play Console app, 5 IAP products, upload keystore, service account, GitHub secrets): **`docs/play-store/SETUP.md`**.
 
 ```bash
-npm run build:android
-cd android && ./gradlew bundleRelease
+npm run keystore:android   # once — writes gitignored secrets/*.jks + base64
+npm run bundle:android     # signed AAB when android/keystore.properties is set
 ```
 
-3. Sign the AAB with your Play upload keystore (create once; store outside git).
-4. Privacy policy: `https://3iatlasgame.xyz/privacy`
-5. See `docs/play-store/README.md`.
+CI: `.github/workflows/android-release.yml` (`workflow_dispatch` only). Uploads AAB artifact; optionally pushes to Play **internal** testing when `PLAY_SERVICE_ACCOUNT_JSON` is set.
+
+- App name: **3iAtlas: The Game** · package `com.youneek.atlas3i`
+- Privacy policy: `https://3iatlasgame.xyz/privacy`
+- First AAB must be uploaded manually in Play Console; later builds can use CI.
 
 ---
 

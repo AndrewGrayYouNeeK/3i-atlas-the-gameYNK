@@ -4,9 +4,11 @@ import { ArrowLeft, Shield, Zap, Eye, Trash2, RotateCcw } from 'lucide-react';
 import { api } from '@/api/supabaseApi';
 import { SKINS, POWERUPS } from '../game/constants.js';
 import { useAuth } from '@/lib/AuthContext';
+import { Capacitor } from '@capacitor/core';
 import { isNativeApp } from '@/lib/native.js';
-import { loadIapStoreProducts, purchaseSkinIap, restoreSkinPurchases, syncOwnedSkinsFromStoreKit } from '@/lib/iap.js';
+import { loadIapStoreProducts, purchaseSkinIap, restoreSkinPurchases, syncOwnedSkinsFromNativeStore } from '@/lib/iap.js';
 import { getLocalIapOwnedSkins, mergeOwnedSkins } from '@/lib/iapLocalOwnership.js';
+import { registerAndroidBackHandler } from '@/lib/androidBackButton.js';
 import SkinCard from '../components/store/SkinCard.jsx';
 import {
   AlertDialog,
@@ -40,16 +42,26 @@ export default function Store({ onBack }) {
   const touchStartY = useRef(0);
   const pullDistance = useRef(0);
   const native = isNativeApp();
+  const storeLabel = Capacitor.getPlatform() === 'android' ? 'Google Play' : 'Apple';
 
   useEffect(() => {
     if (isAuthenticated) loadProfile();
-    // Check for Stripe success redirect (web only)
+    // Check for Stripe success redirect (web only — never used in native Android/iOS)
+    if (native) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('checkout') === 'success') {
       setTimeout(() => loadProfile(true), 1500);
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, native]);
+
+  useEffect(() => {
+    if (!native) return undefined;
+    return registerAndroidBackHandler(() => {
+      onBack?.();
+      return true;
+    });
+  }, [native, onBack]);
 
   useEffect(() => {
     if (!native) return;
@@ -66,7 +78,7 @@ export default function Store({ onBack }) {
     if (!native || !isAuthenticated) return;
     let cancelled = false;
     (async () => {
-      const result = await syncOwnedSkinsFromStoreKit();
+      const result = await syncOwnedSkinsFromNativeStore();
       if (cancelled) return;
       if (result.restoredSkinIds.length) {
         refreshDeviceOwned();
@@ -152,7 +164,7 @@ export default function Store({ onBack }) {
       if (isAuthenticated) await loadProfile();
 
       if (result.restoredSkinIds.length === 0) {
-        setNativeNotice('No previous skin purchases found for this Apple ID.');
+        setNativeNotice(`No previous skin purchases found for this ${storeLabel} account.`);
       } else {
         setNativeNotice(`Restored ${result.restoredSkinIds.length} skin${result.restoredSkinIds.length === 1 ? '' : 's'}.`);
         setUnlockedSkin(result.restoredSkinIds[0]);
@@ -261,7 +273,7 @@ export default function Store({ onBack }) {
             </div>
             <p className="text-xs text-white/45 mb-4">
               {native
-                ? 'You can buy skins with Apple, then sign in to save them to your player profile.'
+                ? `You can buy skins with ${storeLabel}, then sign in to save them to your player profile.`
                 : 'Your purchases are saved to your player profile.'}
             </p>
             <button onClick={navigateToLogin} className="px-5 py-2 rounded-xl font-orbitron text-[12px] text-white" style={{ background: 'linear-gradient(135deg,#7c3aed,#5b21b6)' }}>

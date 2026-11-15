@@ -21,8 +21,12 @@ function isUserCancel(error) {
   );
 }
 
+function nativePlatform() {
+  return Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
+}
+
 /**
- * Load StoreKit product metadata (localized prices). Safe no-op on web.
+ * Load StoreKit / Play Billing product metadata (localized prices). Safe no-op on web.
  * @returns {Promise<Record<string, { priceString?: string, title?: string, description?: string }>>}
  */
 export async function loadIapStoreProducts() {
@@ -54,13 +58,35 @@ export async function loadIapStoreProducts() {
 }
 
 async function recordOwnershipOnServer(transaction) {
-  if (!transaction?.jwsRepresentation && !transaction?.transactionId) {
-    return { ok: false, error: 'Missing transaction proof' };
-  }
-
+  const platform = nativePlatform();
   const me = await api.auth.me();
   if (!me) {
     return { ok: false, deferred: true, error: 'Not signed in' };
+  }
+
+  if (platform === 'android') {
+    const purchaseToken = transaction?.purchaseToken || transaction?.transactionId || null;
+    const productId = transaction?.productIdentifier || transaction?.productId || null;
+    if (!purchaseToken || !productId) {
+      return { ok: false, error: 'Missing Google Play purchase token' };
+    }
+
+    const { data, error } = await api.functions.invoke('verifyGooglePurchase', {
+      purchaseToken,
+      productId,
+      packageName: 'com.youneek.atlas3i',
+      orderId: transaction?.orderId || null,
+    });
+
+    if (error || data?.error) {
+      return { ok: false, error: error?.message || data?.error || 'Server verification failed' };
+    }
+    return { ok: true, data };
+  }
+
+  // iOS (StoreKit 2)
+  if (!transaction?.jwsRepresentation && !transaction?.transactionId) {
+    return { ok: false, error: 'Missing transaction proof' };
   }
 
   const { data, error } = await api.functions.invoke('verifyApplePurchase', {
@@ -76,12 +102,13 @@ async function recordOwnershipOnServer(transaction) {
 }
 
 /**
- * Purchase a non-consumable skin via Apple IAP.
+ * Purchase a non-consumable skin via Apple IAP or Google Play Billing.
  * Always unlocks locally on success; syncs to Supabase when signed in.
+ * Web builds must use Stripe — never call this on web.
  */
 export async function purchaseSkinIap(skinId) {
   if (!isNativeApp()) {
-    throw new Error('Apple IAP is only available in the native app');
+    throw new Error('Native in-app purchases are only available in the iOS/Android app');
   }
 
   const catalog = getIapProductForSkin(skinId);
@@ -118,14 +145,20 @@ export async function purchaseSkinIap(skinId) {
     serverSynced: Boolean(server.ok),
     serverDeferred: Boolean(server.deferred),
     serverError: server.error || null,
+    platform: nativePlatform(),
   };
 }
 
 /**
- * Sync current StoreKit entitlements to local storage + Supabase (no Apple restore UI).
+ * Sync current StoreKit / Play entitlements to local storage + Supabase.
  * Safe to call when a signed-in player opens the native Store.
  */
 export async function syncOwnedSkinsFromStoreKit() {
+  return syncOwnedSkinsFromNativeStore();
+}
+
+/** Platform-agnostic alias for entitlement sync. */
+export async function syncOwnedSkinsFromNativeStore() {
   if (!isNativeApp()) {
     return { restoredSkinIds: [], serverSyncedCount: 0 };
   }
@@ -147,6 +180,7 @@ export async function syncOwnedSkinsFromStoreKit() {
     for (const purchase of purchases || []) {
       if (!isKnownIapProductId(purchase.productIdentifier)) continue;
       if (purchase.revocationDate) continue;
+      if (purchase.isActive === false) continue;
       const skinId = getSkinIdForProductId(purchase.productIdentifier);
       if (!skinId) continue;
       addLocalIapOwnedSkin(skinId);
@@ -158,6 +192,7 @@ export async function syncOwnedSkinsFromStoreKit() {
     return {
       restoredSkinIds: Array.from(new Set(restoredSkinIds)),
       serverSyncedCount,
+      platform: nativePlatform(),
     };
   } catch (error) {
     console.warn('IAP entitlement sync failed:', error);
@@ -166,7 +201,7 @@ export async function syncOwnedSkinsFromStoreKit() {
 }
 
 /**
- * Restore non-consumable purchases (required by Apple).
+ * Restore non-consumable purchases (required by Apple; also used on Play).
  * Unlocks matching skins locally and syncs to Supabase when signed in.
  */
 export async function restoreSkinPurchases() {
@@ -192,6 +227,7 @@ export async function restoreSkinPurchases() {
   for (const purchase of purchases || []) {
     if (!isKnownIapProductId(purchase.productIdentifier)) continue;
     if (purchase.revocationDate) continue;
+    if (purchase.isActive === false) continue;
 
     const skinId = getSkinIdForProductId(purchase.productIdentifier);
     if (!skinId) continue;
@@ -208,6 +244,6 @@ export async function restoreSkinPurchases() {
   return {
     restoredSkinIds: Array.from(new Set(restoredSkinIds)),
     serverSyncedCount,
-    platform: Capacitor.getPlatform(),
+    platform: nativePlatform(),
   };
 }

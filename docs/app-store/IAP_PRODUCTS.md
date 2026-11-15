@@ -33,7 +33,7 @@ Suggested USD prices match the current Stripe / in-game catalog in `src/game/con
 
 ## Client plugin
 
-Native billing uses `@capgo/native-purchases` (StoreKit 2). Web builds keep Stripe Checkout via `createStripeCheckout` and never call StoreKit.
+Native billing uses `@capgo/native-purchases` (StoreKit 2 on iOS; Google Play Billing on Android with the **same product IDs**). Web builds keep Stripe Checkout via `createStripeCheckout` and never call StoreKit / Play Billing. See `docs/play-store/SETUP.md` for Play Console product creation.
 
 ## Server verification (Supabase)
 
