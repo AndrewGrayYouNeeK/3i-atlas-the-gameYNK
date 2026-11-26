@@ -22,7 +22,7 @@ const TUTORIAL_STEPS_DESKTOP = [
   {
     icon: '🌫️',
     title: 'The disguise',
-    desc: 'Q dims the coma, E vents it brighter, R aligns the tail with the solar wind. The green band on a meter is what a comet is allowed to look like.',
+    desc: 'Hold Q to dim the coma, E to vent it brighter, R to align the tail with the solar wind. You can also click and hold the Dim, Vent and Align tail buttons with the mouse. The green band on a meter is what a comet is allowed to look like.',
     tip: 'Too faint and they see the hull. Too bright and you are an engine.',
   },
   {
@@ -34,15 +34,27 @@ const TUTORIAL_STEPS_DESKTOP = [
   {
     icon: '🧭',
     title: 'Trajectory',
-    desc: 'WASD steers. Hard turns and Shift burns raise trajectory anomaly and, near Jupiter, a radio leak. Coast while a camera is on you. Correct in the gaps.',
+    desc: 'Steer with WASD or the arrow keys, or click and drag anywhere on the sky with the mouse. Hard turns and Shift burns raise trajectory anomaly and, near Jupiter, a radio leak. Coast while a camera is on you. Correct in the gaps.',
     tip: 'Non-gravitational acceleration is allowed only inside the jet window',
   },
   {
     icon: '📅',
     title: 'The timeline',
     desc: 'Discovery, Hubble and JWST, the Mars passage, solar conjunction, perihelion near 1.36 AU, the morning recovery, Jupiter, then departure. The briefings separate the public record from the ship log.',
-    tip: 'Read the stage before you engage',
+    tip: 'Esc pauses at any time. Read the stage before you engage.',
   },
+];
+
+const DESKTOP_KEYS = [
+  ['WASD / ←↑↓→', 'Steer'],
+  ['Mouse drag', 'Steer'],
+  ['Q', 'Dim'],
+  ['E', 'Vent'],
+  ['R', 'Align tail'],
+  ['Shift', 'Burn'],
+  ['1 2 3', 'Spectrum'],
+  ['F', 'Outburst'],
+  ['Esc', 'Pause'],
 ];
 
 const TUTORIAL_STEPS_TOUCH = [
@@ -499,7 +511,7 @@ export default function MainMenu({ onStartGame }) {
               exit={{ y: 40, opacity: 0, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 28 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-sm rounded-3xl overflow-hidden max-h-full overflow-y-auto"
+              className={`w-full ${touchUi ? 'max-w-sm' : 'max-w-xl'} rounded-3xl overflow-hidden max-h-full overflow-y-auto`}
               style={{ background: 'rgba(12,8,28,0.98)', border: '1px solid rgba(140,80,255,0.25)', boxShadow: '0 32px 80px rgba(0,0,0,0.8), 0 0 40px rgba(100,60,200,0.15)' }}
             >
               {/* Progress bar */}
@@ -540,6 +552,16 @@ export default function MainMenu({ onStartGame }) {
                       <span className="text-violet-400 text-xs">💡</span>
                       <span className="text-xs text-violet-300/80 italic">{TUTORIAL_STEPS[tutorialStep].tip}</span>
                     </div>
+                    {!touchUi && (
+                      <div className="mt-4 grid grid-cols-3 gap-px rounded-xl overflow-hidden border border-white/10 bg-white/10" aria-label="Keyboard and mouse controls">
+                        {DESKTOP_KEYS.map(([keys, action]) => (
+                          <div key={keys} className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-[rgba(12,8,28,0.98)]">
+                            <kbd className="font-orbitron text-[9px] px-1.5 py-0.5 rounded-md text-violet-100/85 bg-white/10 border border-white/15 whitespace-nowrap">{keys}</kbd>
+                            <span className="text-[11px] text-white/55 truncate">{action}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 </AnimatePresence>
 

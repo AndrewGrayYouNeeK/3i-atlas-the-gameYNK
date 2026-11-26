@@ -94,6 +94,21 @@
     inset: 0;
   }
 
+  /* Mouse + keyboard (Mac/PC browser, iPhone app on a Mac): the phone tab bar is not used;
+     the main menu has Store / Leaderboard buttons and sub-pages have a back arrow. */
+  html.ui-desktop .atlas-bottom-nav {
+    display: none;
+  }
+
+  html.ui-desktop canvas {
+    cursor: crosshair;
+  }
+
+  body.atlas-steering,
+  body.atlas-steering canvas {
+    cursor: grabbing;
+  }
+
   /* How to Play modal owns the lower screen — hide the tab bar underneath it. */
   body.atlas-tutorial-open .atlas-bottom-nav {
     visibility: hidden;

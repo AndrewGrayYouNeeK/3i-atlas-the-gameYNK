@@ -11,7 +11,7 @@ import EndgameScreen from '../components/game/EndgameScreen.jsx';
 import { LEVELS, getCraft } from '../game/constants.js';
 import { getDailyChallenge } from '../game/dailyChallenge.js';
 import { api } from '@/api/supabaseApi';
-import { useTouchUi } from '@/lib/touchUi.js';
+import { useDeviceProfile } from '@/lib/touchUi.js';
 import { registerAndroidBackHandler } from '@/lib/androidBackButton.js';
 
 export default function Game({ levelId: initialLevel = 0, difficulty = 'medium', skin = 'default', mode = 'mission', onMainMenu, totalScoreRef }) {
@@ -34,7 +34,8 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
   const [gameOverReason, setGameOverReason] = useState('detected');
   const engineRef = useRef(null);
   const stage = LEVELS[levelId];
-  const touchUi = useTouchUi();
+  const { touchUi, wide } = useDeviceProfile();
+  const desktop = !touchUi;
 
   useEffect(() => {
     const next = Math.max(0, Math.min(LEVELS.length - 1, initialLevel || 0));
@@ -74,6 +75,46 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [state]);
+
+  // Desktop: click and drag anywhere on the play area to steer (keys still work).
+  useEffect(() => {
+    if (!desktop || state !== 'playing') return undefined;
+    const reach = 90;
+    let origin = null;
+    const steer = (e) => {
+      if (!origin) return;
+      let dx = e.clientX - origin.x;
+      let dy = e.clientY - origin.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist > reach) {
+        dx = (dx / dist) * reach;
+        dy = (dy / dist) * reach;
+      }
+      engineRef.current?.setJoystick({ active: true, dx: dx / reach, dy: dy / reach });
+    };
+    const down = (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0 || e.target?.tagName !== 'CANVAS') return;
+      origin = { x: e.clientX, y: e.clientY };
+      document.body.classList.add('atlas-steering');
+    };
+    const up = () => {
+      if (!origin) return;
+      origin = null;
+      document.body.classList.remove('atlas-steering');
+      engineRef.current?.setJoystick({ active: false, dx: 0, dy: 0 });
+    };
+    window.addEventListener('pointerdown', down);
+    window.addEventListener('pointermove', steer);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('blur', up);
+    return () => {
+      up();
+      window.removeEventListener('pointerdown', down);
+      window.removeEventListener('pointermove', steer);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('blur', up);
+    };
+  }, [desktop, state]);
 
   const handleScoreChange = useCallback((s) => setScore(s), []);
   const handleHud = useCallback((snapshot) => setHud(snapshot), []);
@@ -196,28 +237,63 @@ export default function Game({ levelId: initialLevel = 0, difficulty = 'medium',
               paddingBottom: touchUi ? 0 : 'max(1.25rem, env(safe-area-inset-bottom, 0px))',
             }}
           >
-            <div className="shrink-0 flex flex-col items-center gap-1.5 pt-2 pb-2 px-3">
-              <div className="flex items-center gap-2 px-3 min-h-[44px] rounded-xl backdrop-blur-md pointer-events-auto" style={{ background: 'rgba(5,5,18,0.72)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div className="font-orbitron text-[10px] tracking-[0.18em] text-white/40">{stage?.dateLabel}</div>
-                <div className="font-orbitron text-[12px] tracking-[0.14em] text-white/80">{stage?.name?.toUpperCase()}</div>
+            {desktop ? (
+              <div className="shrink-0 w-full max-w-[1600px] mx-auto flex items-center justify-between gap-3 pt-3 pb-2 px-4 lg:px-6">
+                <div className="flex items-center gap-3 px-4 min-h-[44px] rounded-xl backdrop-blur-md pointer-events-auto border border-white/10" style={{ background: 'rgba(5,5,18,0.72)' }}>
+                  <div className="font-orbitron text-[11px] tracking-[0.18em] text-white/40">{stage?.dateLabel}</div>
+                  <div className="font-orbitron text-[13px] tracking-[0.14em] text-white/85">{stage?.name?.toUpperCase()}</div>
+                </div>
+                <div className="hidden lg:flex items-center gap-3 px-4 min-h-[44px] rounded-xl font-orbitron text-[10px] tracking-[0.12em] text-white/45 border border-white/10" style={{ background: 'rgba(5,5,18,0.55)' }}>
+                  <span><kbd className="text-white/75">WASD</kbd> / <kbd className="text-white/75">ARROWS</kbd> STEER</span>
+                  <span className="text-white/20">·</span>
+                  <span><kbd className="text-white/75">CLICK + DRAG</kbd> STEER</span>
+                  <span className="text-white/20">·</span>
+                  <span><kbd className="text-white/75">ESC</kbd> PAUSE</span>
+                </div>
                 <button
+                  type="button"
                   onClick={() => setPaused(true)}
-                  className="min-w-[44px] min-h-[44px] -mr-1 flex items-center justify-center gap-0.5 opacity-70 hover:opacity-100"
-                  aria-label="Pause"
+                  className="pointer-events-auto min-h-[44px] px-4 flex items-center gap-2 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/25 transition-colors font-orbitron text-[10px] tracking-[0.16em] cursor-pointer"
+                  style={{ background: 'rgba(5,5,18,0.72)' }}
+                  aria-label="Pause (Esc)"
+                  title="Pause (Esc)"
                 >
-                  <div className="w-0.5 h-3 rounded-sm bg-white/80" />
-                  <div className="w-0.5 h-3 rounded-sm bg-white/80" />
+                  <span className="flex gap-0.5"><span className="w-0.5 h-3 rounded-sm bg-white/80" /><span className="w-0.5 h-3 rounded-sm bg-white/80" /></span>
+                  PAUSE
+                  <kbd className="px-1.5 py-0.5 rounded-md text-[9px] bg-white/10 border border-white/20">ESC</kbd>
                 </button>
               </div>
-              {!touchUi && (
-                <div className="hidden md:block px-3 py-1 rounded-xl font-orbitron text-[9px] tracking-[0.14em] text-white/35" style={{ background: 'rgba(5,5,18,0.45)' }}>
-                  WASD STEER · Q DIM · E VENT · R ALIGN · SHIFT BURN · ESC PAUSE
+            ) : (
+              <div className="shrink-0 flex flex-col items-center gap-1.5 pt-2 pb-2 px-3">
+                <div className="flex items-center gap-2 px-3 min-h-[44px] rounded-xl backdrop-blur-md pointer-events-auto" style={{ background: 'rgba(5,5,18,0.72)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="font-orbitron text-[10px] tracking-[0.18em] text-white/40">{stage?.dateLabel}</div>
+                  <div className="font-orbitron text-[12px] tracking-[0.14em] text-white/80">{stage?.name?.toUpperCase()}</div>
+                  <button
+                    onClick={() => setPaused(true)}
+                    className="min-w-[44px] min-h-[44px] -mr-1 flex items-center justify-center gap-0.5 opacity-70 hover:opacity-100"
+                    aria-label="Pause"
+                  >
+                    <div className="w-0.5 h-3 rounded-sm bg-white/80" />
+                    <div className="w-0.5 h-3 rounded-sm bg-white/80" />
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            <CampaignHUD hud={hud} stage={stage} />
-            <CampaignControls engineRef={engineRef} controls={stage?.controls || []} />
+            {desktop ? (
+              <CampaignHUD
+                hud={hud}
+                stage={stage}
+                desktop
+                wide={wide}
+                controls={<CampaignControls engineRef={engineRef} controls={stage?.controls || []} />}
+              />
+            ) : (
+              <>
+                <CampaignHUD hud={hud} stage={stage} />
+                <CampaignControls engineRef={engineRef} controls={stage?.controls || []} />
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
