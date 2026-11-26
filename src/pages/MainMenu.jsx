@@ -41,8 +41,20 @@ const TUTORIAL_STEPS_DESKTOP = [
     icon: '📅',
     title: 'The timeline',
     desc: 'Discovery, Hubble and JWST, the Mars passage, solar conjunction, perihelion near 1.36 AU, the morning recovery, Jupiter, then departure. The briefings separate the public record from the ship log.',
-    tip: 'Read the stage before you engage',
+    tip: 'Esc pauses at any time. Read the stage before you engage.',
   },
+];
+
+const DESKTOP_KEYS = [
+  ['WASD / ←↑↓→', 'Steer'],
+  ['Mouse drag', 'Steer'],
+  ['Q', 'Dim'],
+  ['E', 'Vent'],
+  ['R', 'Align tail'],
+  ['Shift', 'Burn'],
+  ['1 2 3', 'Spectrum'],
+  ['F', 'Outburst'],
+  ['Esc', 'Pause'],
 ];
 
 const TUTORIAL_STEPS_TOUCH = [
