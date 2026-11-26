@@ -2,9 +2,18 @@ import { Capacitor } from '@capacitor/core';
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { initAndroidBackButton } from './androidBackButton.js';
 
 export function isNativeApp() {
   return Capacitor.isNativePlatform();
+}
+
+export function isAndroidApp() {
+  return Capacitor.getPlatform() === 'android';
+}
+
+export function isIosApp() {
+  return Capacitor.getPlatform() === 'ios';
 }
 
 export async function initNativeShell() {
@@ -12,6 +21,10 @@ export async function initNativeShell() {
 
   document.documentElement.classList.add('native-app');
   document.body.classList.add('native-app');
+  if (isAndroidApp()) {
+    document.documentElement.classList.add('native-android');
+    document.body.classList.add('native-android');
+  }
 
   try {
     await StatusBar.setOverlaysWebView({ overlay: true });
@@ -32,4 +45,6 @@ export async function initNativeShell() {
   } catch {
     // Splash already dismissed.
   }
+
+  initAndroidBackButton();
 }

@@ -1,12 +1,13 @@
 /**
- * Apple IAP product catalog for cosmetic skins.
+ * Native IAP product catalog for cosmetic skins (Apple + Google Play).
  * Single source of truth for product id ↔ skin id mapping.
  *
- * App Store Connect product IDs use:
+ * Product IDs (identical on App Store Connect and Play Console):
  *   com.youneek.atlas3i.skin.<skinId>
  *
  * Prices below match the current Stripe catalog in src/game/constants.js (USD).
- * Always display StoreKit `priceString` at runtime when available.
+ * Always display the platform `priceString` at runtime when available.
+ * Web Stripe Checkout stays separate and is never shown in native apps.
  */
 
 export const IAP_BUNDLE_ID = 'com.youneek.atlas3i';

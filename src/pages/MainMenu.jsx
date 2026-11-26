@@ -9,8 +9,10 @@ import SkinSelector from '../components/menu/SkinSelector.jsx';
 import CometLogo from '../components/menu/CometLogo.jsx';
 import { api } from '@/api/supabaseApi';
 import { mergeOwnedSkins } from '@/lib/iapLocalOwnership.js';
+import { registerAndroidBackHandler } from '@/lib/androidBackButton.js';
+import { useTouchUi } from '@/lib/touchUi.js';
 
-const TUTORIAL_STEPS = [
+const TUTORIAL_STEPS_DESKTOP = [
   {
     icon: '☄️',
     title: 'You are 3I/ATLAS',
@@ -43,8 +45,43 @@ const TUTORIAL_STEPS = [
   },
 ];
 
+const TUTORIAL_STEPS_TOUCH = [
+  {
+    icon: '☄️',
+    title: 'You are 3I/ATLAS',
+    desc: 'Discovered 1 July 2025, you are filed as an interstellar comet. The ship underneath has to keep that story intact from Chile to the edge of the system.',
+    tip: 'Each stage is a real beat on the 2025–2026 trajectory',
+  },
+  {
+    icon: '🌫️',
+    title: 'The disguise',
+    desc: 'Use Dim to thin the coma, Vent to brighten it, and Align Tail to keep the ion trail antisunward. The green band on a meter is what a comet is allowed to look like.',
+    tip: 'Too faint and they see the hull. Too bright and you are an engine.',
+  },
+  {
+    icon: '🛰️',
+    title: 'They are already looking',
+    desc: 'Suspicion climbs when a telescope, orbiter, spectrometer, or coronagraph sees you outside the band. It falls when you look natural, or when the Sun hides you.',
+    tip: 'Hit 100% and the disguise is over',
+  },
+  {
+    icon: '🧭',
+    title: 'Trajectory',
+    desc: 'Steer with the on-screen joystick. Hard turns and Burn raise trajectory anomaly and, near Jupiter, a radio leak. Coast while a camera is on you. Correct in the gaps.',
+    tip: 'Non-gravitational acceleration is allowed only inside the jet window',
+  },
+  {
+    icon: '📅',
+    title: 'The timeline',
+    desc: 'Discovery, Hubble and JWST, the Mars passage, solar conjunction, perihelion near 1.36 AU, the morning recovery, Jupiter, then departure. The briefings separate the public record from the ship log.',
+    tip: 'Read the stage before you engage',
+  },
+];
+
 export default function MainMenu({ onStartGame }) {
   const navigate = useNavigate();
+  const touchUi = useTouchUi();
+  const TUTORIAL_STEPS = touchUi ? TUTORIAL_STEPS_TOUCH : TUTORIAL_STEPS_DESKTOP;
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [selectedLevel, setSelectedLevel] = useState(0);
@@ -59,6 +96,17 @@ export default function MainMenu({ onStartGame }) {
   useEffect(() => {
     document.body.classList.toggle('atlas-tutorial-open', showTutorial);
     return () => document.body.classList.remove('atlas-tutorial-open');
+  }, [showTutorial]);
+
+  useEffect(() => {
+    return registerAndroidBackHandler(() => {
+      if (showTutorial) {
+        setShowTutorial(false);
+        return true;
+      }
+      // Let the Android listener minimize/exit when already on the home menu.
+      return false;
+    });
   }, [showTutorial]);
 
   useEffect(() => {

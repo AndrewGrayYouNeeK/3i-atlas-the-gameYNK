@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Trophy, Crown } from 'lucide-react';
 import { api } from '@/api/supabaseApi';
 import { LEVELS } from '../game/constants.js';
+import { registerAndroidBackHandler } from '@/lib/androidBackButton.js';
 
 const getStealthRating = (detection) => {
   if (detection < 5) return 'S';
@@ -19,6 +20,13 @@ export default function Leaderboard({ onBack }) {
   const pullDistance = useRef(0);
 
   useEffect(() => { loadScores(); }, []);
+
+  useEffect(() => {
+    return registerAndroidBackHandler(() => {
+      onBack?.();
+      return true;
+    });
+  }, [onBack]);
 
   const loadScores = async () => {
     try {

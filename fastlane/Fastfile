@@ -3,9 +3,32 @@
 default_platform(:ios)
 
 BUNDLE_ID = "com.youneek.atlas3i"
+PACKAGE_NAME = "com.youneek.atlas3i"
 # Fastfile lives in fastlane/; repo root is the parent.
 PROJECT_ROOT = File.expand_path("..", __dir__)
 IPA_PATH = File.join(PROJECT_ROOT, "build", "ios", "3I-ATLAS.ipa")
+AAB_PATH = File.join(PROJECT_ROOT, "android", "app", "build", "outputs", "bundle", "release", "app-release.aab")
+
+platform :android do
+  desc "Upload a signed release AAB to the Play internal testing track"
+  lane :internal do
+    json_key = ENV["PLAY_JSON_KEY_PATH"] || File.join(Dir.home, "play", "service-account.json")
+    UI.user_error!("Play service account JSON missing at #{json_key}") unless File.exist?(json_key)
+    UI.user_error!("AAB missing at #{AAB_PATH} — run npm run bundle:android first") unless File.exist?(AAB_PATH)
+
+    supply(
+      package_name: PACKAGE_NAME,
+      json_key: json_key,
+      aab: AAB_PATH,
+      track: "internal",
+      release_status: "draft",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true
+    )
+  end
+end
 
 platform :ios do
   def asc_secrets_present?

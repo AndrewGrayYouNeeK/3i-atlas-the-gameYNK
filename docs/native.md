@@ -5,20 +5,24 @@ The Vite/React game is wrapped with **Capacitor 8**. Web deploy (Cloudflare Work
 | | |
 |--|--|
 | App ID / package | `com.youneek.atlas3i` |
-| Display name | `3I/ATLAS` |
+| Display name (iOS) | `3I/ATLAS` |
+| Display name (Android / Play) | `3iAtlas: The Game` |
 | Version | `1.0.0` (build `1`) |
-| Orientations | Portrait + landscape (iPhone & iPad) |
+| Orientations | Portrait + landscape |
 | Config | `capacitor.config.json` |
 | CI (TestFlight) | `.github/workflows/ios-testflight.yml` on `macos-26` / Xcode 26 — see `RELEASE.md` |
+| CI (Play AAB) | `.github/workflows/android-release.yml` — `workflow_dispatch` only — see `docs/play-store/SETUP.md` |
 
 ## Scripts
 
 ```bash
 npm run build            # web only (Cloudflare)
-npm run icons:native     # rebuild icons/splash from public/logo.webp
-npm run sync:native      # vite build + npx cap sync
+npm run icons:native     # rebuild icons/splash from public/logo.webp (+ Android full-bleed patch)
+npm run sync:native      # vite build + npx cap sync + Android branding patch
 npm run build:ios        # build + sync ios
-npm run build:android    # build + sync android
+npm run build:android    # build + sync android + Play display name / adaptive icon patch
+npm run bundle:android   # build:android + gradle bundleRelease (AAB)
+npm run keystore:android # generate upload keystore + base64 (never commit)
 npm run screenshots:app-store
 ```
 
@@ -37,11 +41,16 @@ npm run screenshots:app-store
 3. Update Android `applicationId` / `namespace` in `android/app/build.gradle`
 4. `npm run sync:native`
 
-## Apple In-App Purchases (cosmetic skins)
+## Native In-App Purchases (cosmetic skins)
 
-- Plugin: `@capgo/native-purchases` (StoreKit 2)
-- Product map: `src/lib/iapProducts.js` → `com.youneek.atlas3i.skin.<skinId>`
+- Plugin: `@capgo/native-purchases` — StoreKit 2 on iOS, Google Play Billing on Android
+- Product map: `src/lib/iapProducts.js` → `com.youneek.atlas3i.skin.<skinId>` (same IDs both stores)
 - Catalog / ASC checklist: `docs/app-store/IAP_PRODUCTS.md`
-- Native Store: purchase + **Restore** via StoreKit; web Store keeps Stripe
-- Ownership: local unlock on device + Supabase `verifyApplePurchase` when signed in
-- After `npm ci`, run `npx cap sync ios` so CapApp-SPM picks up the plugin
+- Play Console checklist: `docs/play-store/SETUP.md`
+- Native Store: purchase + **Restore**; web Store keeps Stripe (never shown in native apps)
+- Ownership: local unlock on device + Supabase `verifyApplePurchase` / `verifyGooglePurchase` when signed in
+- After `npm ci`, run `npx cap sync` so native projects pick up the plugin
+
+## Android system back
+
+`src/lib/androidBackButton.js` (wired from `initNativeShell`): closes How to Play / Store / Leaderboard overlays, pauses an active run, otherwise minimizes the app.

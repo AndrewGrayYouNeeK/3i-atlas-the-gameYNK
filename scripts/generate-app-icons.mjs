@@ -1,7 +1,11 @@
 /**
  * Build App Store / Play Store icons and splash art from public/logo.webp.
  * Marketing / home-screen icons are full-bleed (edge-to-edge), flattened onto
- * #01010c with no alpha — Apple applies the rounded mask itself.
+ * #01010c with no alpha — Apple/Android apply the mask themselves.
+ *
+ * Android adaptive icon sources:
+ *   icon-foreground.png — full-bleed art (no safe-zone padding)
+ *   icon-background.png — solid #01010c
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -72,16 +76,21 @@ async function logoOnBg(canvasSize, logoRatio = 0.72, zoom = 1) {
     .toBuffer();
 }
 
+/**
+ * Adaptive-icon foreground: full-bleed opaque art (same as marketing icon).
+ * Capacitor-assets may inset this; we strip insets afterward for Android.
+ */
+async function adaptiveForeground(canvasSize) {
+  return logoOnBg(canvasSize, ICON_LOGO_RATIO, ICON_ZOOM);
+}
+
 async function main() {
   await mkdir(assetsDir, { recursive: true });
 
   const icon = await logoOnBg(1024, ICON_LOGO_RATIO, ICON_ZOOM);
   // 1280 is enough for Capacitor splash scaling and keeps the repo lean.
   const splash = await logoOnBg(1280, SPLASH_LOGO_RATIO);
-  const foreground = await sharp(logoPath)
-    .resize(1024, 1024, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
+  const foreground = await adaptiveForeground(1024);
   const background = await solid(1024);
 
   await writeFile(path.join(assetsDir, 'icon-only.png'), icon);
@@ -98,6 +107,7 @@ async function main() {
   await writeFile(path.join(iosIconDir, 'AppIcon-512@2x.png'), icon);
 
   console.log('Wrote Capacitor asset sources to assets/ and iOS marketing icon (full-bleed).');
+  console.log('Note: capacitor-assets may rewrite public/manifest.json — restore from git if needed.');
 }
 
 main().catch((err) => {

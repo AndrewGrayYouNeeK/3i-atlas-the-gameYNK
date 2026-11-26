@@ -63,8 +63,9 @@ export default function Privacy() {
             <section>
               <h2 className="font-orbitron text-xs tracking-widest text-white/80 mb-2">PAYMENTS</h2>
               <p>
-                Optional in-app purchases (cosmetic skins) are processed by Stripe. We do not store full payment card
-                numbers on our servers. Stripe’s privacy policy applies to payment processing.
+                Optional in-app purchases (cosmetic skins) are processed by Stripe on the website, by Apple on
+                iOS, and by Google Play Billing on Android. We do not store full payment card numbers on our
+                servers. Stripe’s / Apple’s / Google’s privacy policies apply to their respective payment flows.
               </p>
             </section>
 
