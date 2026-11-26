@@ -77,19 +77,26 @@ export default function CampaignControls({ engineRef, controls = [] }) {
       window.removeEventListener('touchend', end);
       window.removeEventListener('touchcancel', end);
     };
-  }, [engineRef]);
+  }, [engineRef, touchUi]);
 
   const button = (control, { showKey }) => (
     <button
       key={control.id}
       type="button"
-      aria-label={control.label}
-      className="min-h-[44px] min-w-[44px] px-3 py-2.5 rounded-2xl font-orbitron text-[11px] tracking-wider text-white/90 select-none flex flex-col items-center justify-center"
-      style={{ background: 'rgba(18, 16, 40, 0.95)', border: '1px solid rgba(196,181,253,0.45)', touchAction: 'none' }}
+      aria-label={showKey ? `${control.label} (${control.key})` : control.label}
+      title={showKey ? `${control.label} — hold ${control.key}` : undefined}
+      className={
+        showKey
+          ? 'min-h-[44px] min-w-[64px] px-3.5 py-2 rounded-xl font-orbitron text-[11px] tracking-wider text-white/90 select-none flex items-center justify-center gap-2 cursor-pointer transition-colors duration-150 bg-[rgba(18,16,40,0.95)] border border-violet-300/40 hover:bg-violet-500/25 hover:border-violet-300/80 hover:text-white active:bg-violet-500/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300'
+          : 'min-h-[44px] min-w-[44px] px-3 py-2.5 rounded-2xl font-orbitron text-[11px] tracking-wider text-white/90 select-none flex flex-col items-center justify-center'
+      }
+      style={showKey ? { touchAction: 'none' } : { background: 'rgba(18, 16, 40, 0.95)', border: '1px solid rgba(196,181,253,0.45)', touchAction: 'none' }}
       {...hold(engineRef, control.id)}
     >
       {showKey && (
-        <span className="text-[8px] text-white/35 leading-none mb-0.5">{control.key}</span>
+        <kbd className="min-w-[22px] px-1.5 py-0.5 rounded-md text-[9px] leading-none text-violet-100/80 bg-white/10 border border-white/20 font-orbitron">
+          {control.key}
+        </kbd>
       )}
       <span className="leading-tight">{control.label}</span>
     </button>
@@ -125,8 +132,9 @@ export default function CampaignControls({ engineRef, controls = [] }) {
     );
   }
 
+  // Desktop: inline key-hinted buttons; the HUD footer places them beside the objective.
   return (
-    <div className="hidden md:flex absolute bottom-4 right-4 z-20 gap-2 pointer-events-auto">
+    <div className="flex flex-wrap items-center justify-end gap-2 pointer-events-auto" role="group" aria-label="Ship actions">
       {controls.map((c) => button(c, { showKey: true }))}
     </div>
   );
